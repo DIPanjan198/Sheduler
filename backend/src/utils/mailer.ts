@@ -6,48 +6,34 @@ import https from 'https';
  * Supports Direct Gmail SMTP (Google App Passwords), Custom SMTP, SendGrid REST API, and Console Sandbox
  */
 export async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
-  const rawGmailUser = process.env.GMAIL_USER || process.env.SMTP_USER;
-  const rawGmailPass = process.env.GMAIL_PASS || process.env.SMTP_PASS;
+  const rawGmailUser = process.env.GMAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER;
+  const rawGmailPass = process.env.GMAIL_PASS || process.env.GMAIL_PASSWORD || process.env.SMTP_PASS || process.env.EMAIL_PASS;
   const gmailUser = rawGmailUser ? rawGmailUser.trim().replace(/^["']|["']$/g, '') : undefined;
   const gmailPass = rawGmailPass ? rawGmailPass.trim().replace(/^["']|["']$/g, '').replace(/\s+/g, '') : undefined;
   const smtpHost = process.env.SMTP_HOST ? process.env.SMTP_HOST.trim().replace(/^["']|["']$/g, '') : undefined;
-  const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
+  const smtpPort = parseInt(process.env.SMTP_PORT || '465', 10);
   const smtpSecure = process.env.SMTP_SECURE === 'true' || smtpPort === 465;
   const rawSender = process.env.SENDER_EMAIL ? process.env.SENDER_EMAIL.trim().replace(/^["']|["']$/g, '') : undefined;
   const senderEmail = rawSender || (gmailUser ? gmailUser : 'noreply@shiftscheduler.com');
 
-  // 1. Direct Gmail SMTP / Nodemailer Transport (if credentials or host provided)
+  // 1. Direct Gmail SMTP / Nodemailer Transport (Direct Port 465 SSL for high cloud-delivery reliability)
   if ((gmailUser && gmailPass) || smtpHost) {
     try {
-      const transporter = (gmailUser && gmailPass && !smtpHost)
-        ? nodemailer.createTransport({
-            service: 'gmail',
-            connectionTimeout: 5000,
-            greetingTimeout: 5000,
-            socketTimeout: 8000,
-            auth: {
-              user: gmailUser,
-              pass: gmailPass.replace(/\s+/g, '') // remove spaces in app password
-            },
-            tls: {
-              rejectUnauthorized: false
-            }
-          })
-        : nodemailer.createTransport({
-            host: smtpHost || 'smtp.gmail.com',
-            port: smtpPort,
-            secure: smtpSecure,
-            connectionTimeout: 10000,
-            greetingTimeout: 10000,
-            socketTimeout: 15000,
-            auth: (gmailUser && gmailPass) ? {
-              user: gmailUser,
-              pass: gmailPass.replace(/\s+/g, '')
-            } : undefined,
-            tls: {
-              rejectUnauthorized: false
-            }
-          });
+      const transporter = nodemailer.createTransport({
+        host: smtpHost || 'smtp.gmail.com',
+        port: smtpHost ? smtpPort : 465,
+        secure: smtpHost ? smtpSecure : true,
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
+        auth: (gmailUser && gmailPass) ? {
+          user: gmailUser,
+          pass: gmailPass
+        } : undefined,
+        tls: {
+          rejectUnauthorized: false
+        }
+      });
 
       const info = await transporter.sendMail({
         from: `"Shift Scheduler" <${senderEmail}>`,
