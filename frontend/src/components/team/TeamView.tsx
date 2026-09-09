@@ -100,22 +100,31 @@ export const TeamView: React.FC = () => {
 
   const handleDisable = async (id: string, name: string) => {
     if (!window.confirm(`Are you sure you want to disable ${name}'s account?`)) return;
+    
+    // Optimistic UI update
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, status: 'DISABLED' as const } : u));
     try {
       await api.request(`/users/${id}?permanent=false`, { method: 'DELETE' });
       showToast(`Employee ${name} account disabled`);
-      loadTeam();
     } catch (err: any) {
+      loadTeam();
       showToast(err.message || 'Failed to disable employee', 'error');
     }
   };
 
   const handleRemove = async (id: string, name: string) => {
     if (!window.confirm(`Are you sure you want to PERMANENTLY REMOVE ${name} from your business team? This action cannot be undone.`)) return;
+    
+    // Instant optimistic removal from UI — no waiting
+    const previousUsers = [...users];
+    setUsers(prev => prev.filter(u => u.id !== id));
+
     try {
       await api.request(`/users/${id}?permanent=true`, { method: 'DELETE' });
       showToast(`Employee ${name} removed permanently from team`);
-      loadTeam();
     } catch (err: any) {
+      // Rollback on failure
+      setUsers(previousUsers);
       showToast(err.message || 'Failed to remove employee', 'error');
     }
   };

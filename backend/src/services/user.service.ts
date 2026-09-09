@@ -98,27 +98,27 @@ export class UserService {
       throw { status: 403, code: 'FORBIDDEN', message: 'User does not belong to your business' };
     }
 
-    // 1. Unassign shifts assigned to this user
-    await prisma.shift.updateMany({
-      where: { assignedUserId: userId },
-      data: { assignedUserId: null }
-    });
+    // Run all relational cleanups in parallel for maximum speed
+    await Promise.all([
+      prisma.shift.updateMany({
+        where: { assignedUserId: userId },
+        data: { assignedUserId: null }
+      }),
+      prisma.timeClockEntry.deleteMany({ where: { userId } }),
+      prisma.notification.deleteMany({ where: { userId } }),
+      prisma.timeOffRequest.deleteMany({ where: { userId } }),
+      prisma.shiftSwapRequest.deleteMany({
+        where: {
+          OR: [
+            { requestedByUserId: userId },
+            { targetUserId: userId },
+            { claimedByUserId: userId }
+          ]
+        }
+      })
+    ]);
 
-    // 2. Delete associated time clock entries, notifications, time off requests, shift swaps
-    await prisma.timeClockEntry.deleteMany({ where: { userId } });
-    await prisma.notification.deleteMany({ where: { userId } });
-    await prisma.timeOffRequest.deleteMany({ where: { userId } });
-    await prisma.shiftSwapRequest.deleteMany({
-      where: {
-        OR: [
-          { requestedByUserId: userId },
-          { targetUserId: userId },
-          { claimedByUserId: userId }
-        ]
-      }
-    });
-
-    // 3. Delete user profile permanently
+    // Finally delete user profile permanently
     await prisma.user.delete({
       where: { id: userId }
     });
