@@ -34,17 +34,43 @@ export const TeamView: React.FC = () => {
 
   useDataSync(loadTeam, 5000);
 
-  const handleInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleInvite = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    if (!firstName.trim()) {
+      showToast('Please enter first name', 'error');
+      return;
+    }
+    if (!lastName.trim()) {
+      showToast('Please enter last name', 'error');
+      return;
+    }
+    if (!email.trim() || !email.includes('@')) {
+      showToast('Please enter a valid email address', 'error');
+      return;
+    }
+    const digitsOnly = phone.replace(/\D/g, '');
+    if (digitsOnly.length < 10) {
+      showToast('Please enter a 10-digit mobile number', 'error');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const res = await api.request<any>('/auth/invite', {
         method: 'POST',
-        body: JSON.stringify({ firstName, lastName, email, phone, role, hourlyRate: parseFloat(hourlyRate) || 0 })
+        body: JSON.stringify({ 
+          firstName: firstName.trim(), 
+          lastName: lastName.trim(), 
+          email: email.trim().toLowerCase(), 
+          phone: phone.startsWith('+91') ? phone : `+91${digitsOnly.slice(-10)}`, 
+          role, 
+          hourlyRate: parseFloat(hourlyRate) || 0 
+        })
       });
-      showToast(res.message || `Real-time email notification sent to ${email}!`);
+      showToast(res.message || `Invitation dispatched to ${email}!`);
       
-      const inviteUrl = res.user?.inviteUrl || `http://localhost:3000/accept-invite?token=${res.user?.inviteToken}`;
+      const inviteUrl = res.user?.inviteUrl || `${window.location.origin}/accept-invite?token=${res.user?.inviteToken}`;
       setCreatedInviteUrl(inviteUrl);
       loadTeam();
     } catch (err: any) {
@@ -208,7 +234,7 @@ export const TeamView: React.FC = () => {
               <Button type="button" variant="ghost" onClick={handleCloseModal}>
                 Cancel
               </Button>
-              <Button form="invite-team-form" type="submit" isLoading={isSubmitting}>
+              <Button type="button" onClick={() => handleInvite()} isLoading={isSubmitting}>
                 Send Invite
               </Button>
             </div>

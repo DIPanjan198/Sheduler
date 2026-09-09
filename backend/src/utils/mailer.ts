@@ -20,6 +20,9 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
         host: smtpHost || 'smtp.gmail.com',
         port: smtpPort,
         secure: smtpSecure,
+        connectionTimeout: 5000,
+        greetingTimeout: 5000,
+        socketTimeout: 8000,
         auth: (gmailUser && gmailPass) ? {
           user: gmailUser,
           pass: gmailPass.replace(/\s+/g, '') // remove accidental spaces in app password

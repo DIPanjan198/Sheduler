@@ -261,10 +261,13 @@ export class AuthService {
       </div>
     `;
 
-    await sendEmail(user.email, `Invitation to join ${business.name} on Shift Scheduler`, emailHtml);
+    // Dispatch real-time email in background (never block HTTP response)
+    sendEmail(user.email, `Invitation to join ${business.name} on Shift Scheduler`, emailHtml).catch(emailErr => {
+      console.warn(`[Invite Email] Background dispatch exception for ${user.email}:`, emailErr?.message || emailErr);
+    });
 
     return {
-      message: `Real-time invitation email dispatched to ${user.email}`,
+      message: `Invitation generated and dispatched to ${user.email}`,
       user: {
         id: user.id,
         email: user.email,
