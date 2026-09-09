@@ -93,15 +93,16 @@ export class AuthService {
     }
 
     if (!user) {
-      user = await prisma.user.findFirst({
-        where: {
-          email: {
-            equals: cleanEmail,
-            mode: 'insensitive'
-          }
-        },
-        include: { business: true }
+      const candidates = await prisma.user.findMany({
+        select: { id: true, email: true }
       });
+      const match = candidates.find(u => u.email.toLowerCase() === cleanEmail);
+      if (match) {
+        user = await prisma.user.findUnique({
+          where: { id: match.id },
+          include: { business: true }
+        });
+      }
     }
 
     if (!user) {
@@ -266,13 +267,18 @@ export class AuthService {
       </div>
     `;
 
-    // Dispatch real-time email in background (never block HTTP response)
-    sendEmail(user.email, `Invitation to join ${business.name} on Shift Scheduler`, emailHtml).catch(emailErr => {
-      console.warn(`[Invite Email] Background dispatch exception for ${user.email}:`, emailErr?.message || emailErr);
-    });
+    // Dispatch real-time email
+    let emailSent = false;
+    try {
+      emailSent = await sendEmail(user.email, `Invitation to join ${business.name} on Shift Scheduler`, emailHtml);
+    } catch (emailErr: any) {
+      console.warn(`[Invite Email] Dispatch exception for ${user.email}:`, emailErr?.message || emailErr);
+    }
 
     return {
-      message: `Invitation generated and dispatched to ${user.email}`,
+      message: emailSent 
+        ? `Invitation sent to ${user.email}!` 
+        : `Invitation generated for ${user.email}`,
       user: {
         id: user.id,
         email: user.email,

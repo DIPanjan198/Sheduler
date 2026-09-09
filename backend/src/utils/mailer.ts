@@ -16,21 +16,32 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
   // 1. Direct Gmail SMTP / Nodemailer Transport (if credentials or host provided)
   if ((gmailUser && gmailPass) || smtpHost) {
     try {
-      const transporter = nodemailer.createTransport({
-        host: smtpHost || 'smtp.gmail.com',
-        port: smtpPort,
-        secure: smtpSecure,
-        connectionTimeout: 5000,
-        greetingTimeout: 5000,
-        socketTimeout: 8000,
-        auth: (gmailUser && gmailPass) ? {
-          user: gmailUser,
-          pass: gmailPass.replace(/\s+/g, '') // remove accidental spaces in app password
-        } : undefined,
-        tls: {
-          rejectUnauthorized: false
-        }
-      });
+      const transporter = (gmailUser && !smtpHost)
+        ? nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+              user: gmailUser,
+              pass: gmailPass.replace(/\s+/g, '') // remove spaces in app password
+            },
+            tls: {
+              rejectUnauthorized: false
+            }
+          })
+        : nodemailer.createTransport({
+            host: smtpHost || 'smtp.gmail.com',
+            port: smtpPort,
+            secure: smtpSecure,
+            connectionTimeout: 10000,
+            greetingTimeout: 10000,
+            socketTimeout: 15000,
+            auth: (gmailUser && gmailPass) ? {
+              user: gmailUser,
+              pass: gmailPass.replace(/\s+/g, '')
+            } : undefined,
+            tls: {
+              rejectUnauthorized: false
+            }
+          });
 
       const info = await transporter.sendMail({
         from: `"Shift Scheduler" <${senderEmail}>`,
