@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
 import { AuthRequest } from '../types';
 import { verifyRefreshToken, generateAccessToken, generateRefreshToken } from '../utils/jwt';
+import { sendEmail } from '../utils/mailer';
+import nodemailer from 'nodemailer';
 
 export class AuthController {
   static async register(req: Request, res: Response) {
@@ -65,6 +67,57 @@ export class AuthController {
     } catch (err: any) {
       const status = err.status || 400;
       return res.status(status).json({ error: { code: err.code || 'ACCEPT_INVITE_FAILED', message: err.message || 'Failed to accept invitation' } });
+    }
+  }
+
+  static async testEmail(req: AuthRequest, res: Response) {
+    const gmailUser = (process.env.GMAIL_USER || '').trim().replace(/^["']|["']$/g, '');
+    const gmailPass = (process.env.GMAIL_PASS || '').trim().replace(/^["']|["']$/g, '').replace(/\s+/g, '');
+    const to = req.user?.email || gmailUser;
+
+    const diagnostics: any = {
+      env: {
+        GMAIL_USER: gmailUser ? `${gmailUser.substring(0, 5)}...` : 'NOT SET',
+        GMAIL_PASS_LENGTH: gmailPass.length,
+        GMAIL_PASS_CHARS: gmailPass.length === 16 ? '16 chars (correct app password length)' : `${gmailPass.length} chars (expected 16 for app password)`,
+        FRONTEND_URL: process.env.FRONTEND_URL || 'NOT SET',
+      },
+      smtpTest: null as any,
+      error: null as any
+    };
+
+    if (!gmailUser || !gmailPass) {
+      return res.status(400).json({ error: 'GMAIL_USER or GMAIL_PASS not set in environment', diagnostics });
+    }
+
+    try {
+      const transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
+        auth: { user: gmailUser, pass: gmailPass },
+        tls: { rejectUnauthorized: false }
+      });
+
+      await transporter.verify();
+      diagnostics.smtpTest = 'SMTP connection verified successfully';
+
+      const info = await transporter.sendMail({
+        from: `"Shift Scheduler Test" <${gmailUser}>`,
+        to,
+        subject: 'Shift Scheduler - SMTP Test Email',
+        html: `<p>This is a test email sent at ${new Date().toISOString()}. If you received this, email delivery is working correctly.</p>`
+      });
+
+      diagnostics.messageId = info.messageId;
+      return res.json({ success: true, message: `Test email sent to ${to}`, diagnostics });
+    } catch (err: any) {
+      diagnostics.error = err.message || String(err);
+      console.error('[Test Email] SMTP error:', err.message || err);
+      return res.status(500).json({ success: false, error: err.message || 'SMTP test failed', diagnostics });
     }
   }
 }
