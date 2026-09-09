@@ -16,7 +16,8 @@ export class AuthService {
     phone: string;
     password: string;
   }) {
-    const existingUser = await prisma.user.findUnique({ where: { email: data.email } });
+    const cleanEmail = data.email ? data.email.trim().toLowerCase() : '';
+    const existingUser = await prisma.user.findUnique({ where: { email: cleanEmail } });
     if (existingUser) {
       throw { status: 400, code: 'EMAIL_EXISTS', message: 'User with this email already exists' };
     }
@@ -33,7 +34,7 @@ export class AuthService {
           create: {
             firstName: data.firstName,
             lastName: data.lastName,
-            email: data.email,
+            email: cleanEmail,
             phone: data.phone,
             passwordHash,
             role: 'MANAGER',
@@ -76,17 +77,46 @@ export class AuthService {
   }
 
   static async login(email: string, password: string) {
-    const user = await prisma.user.findUnique({
-      where: { email },
+    const cleanEmail = email ? email.trim().toLowerCase() : '';
+    const rawEmail = email ? email.trim() : '';
+
+    let user = await prisma.user.findUnique({
+      where: { email: cleanEmail },
       include: { business: true }
     });
 
-    if (!user || user.status === 'DISABLED') {
+    if (!user && rawEmail && rawEmail !== cleanEmail) {
+      user = await prisma.user.findUnique({
+        where: { email: rawEmail },
+        include: { business: true }
+      });
+    }
+
+    if (!user) {
+      user = await prisma.user.findFirst({
+        where: {
+          email: {
+            equals: cleanEmail,
+            mode: 'insensitive'
+          }
+        },
+        include: { business: true }
+      });
+    }
+
+    if (!user) {
+      console.warn(`[Auth] No user found with email: "${cleanEmail}"`);
       throw { status: 401, code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' };
+    }
+
+    if (user.status === 'DISABLED') {
+      console.warn(`[Auth] User account "${cleanEmail}" is disabled`);
+      throw { status: 401, code: 'ACCOUNT_DISABLED', message: 'This account has been disabled by your administrator' };
     }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) {
+      console.warn(`[Auth] Password mismatch for user: "${cleanEmail}"`);
       throw { status: 401, code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' };
     }
 
@@ -101,6 +131,11 @@ export class AuthService {
     const refreshToken = generateRefreshToken(payload);
 
     return {
+      business: {
+        id: user.business.id,
+        name: user.business.name,
+        timezone: user.business.timezone
+      },
       user: {
         id: user.id,
         firstName: user.firstName,

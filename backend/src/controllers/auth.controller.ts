@@ -17,11 +17,14 @@ export class AuthController {
   static async login(req: Request, res: Response) {
     try {
       const { email, password } = req.body;
+      console.log(`[Auth] Login attempt for: "${email?.trim()?.toLowerCase()}"`);
       const result = await AuthService.login(email, password);
+      console.log(`[Auth] Login successful for: "${email?.trim()?.toLowerCase()}" (Role: ${result.user?.role})`);
       return res.json(result);
     } catch (err: any) {
+      console.error(`[Auth] Login failed for "${req.body?.email}":`, err.message || err);
       const status = err.status || 401;
-      return res.status(status).json({ error: { code: err.code || 'LOGIN_FAILED', message: err.message || 'Login failed' } });
+      return res.status(status).json({ error: { code: err.code || 'LOGIN_FAILED', message: err.message || 'Invalid email or password' } });
     }
   }
 

@@ -59,10 +59,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify({ email, password })
       });
       setUser(res.user);
-      setBusiness({
+      setBusiness(res.business || {
         id: res.user.businessId,
         name: res.user.businessName || 'Business',
-        timezone: res.user.timezone || 'America/New_York',
+        timezone: res.user.timezone || 'Asia/Kolkata',
         reminderLeadTimeMinutes: 120
       });
       localStorage.setItem('accessToken', res.tokens?.accessToken);

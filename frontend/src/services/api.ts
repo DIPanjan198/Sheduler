@@ -34,7 +34,8 @@ class ApiClient {
       if (response.status === 401) {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('currentUser');
-        throw new Error(data?.error?.message || 'Your session expired. Please Log Out (top right) and Sign In again.');
+        const isAuthEndpoint = endpoint.startsWith('/auth/login') || endpoint.startsWith('/auth/register');
+        throw new Error(data?.error?.message || (isAuthEndpoint ? 'Invalid email or password' : 'Your session expired. Please Sign In again.'));
       }
       throw new Error(data?.error?.message || data?.message || `HTTP Error ${response.status}`);
     }

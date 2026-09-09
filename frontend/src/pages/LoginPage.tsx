@@ -22,7 +22,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister }) => {
     setErrorMsg('');
     setIsLoading(true);
     try {
-      await login(email, password);
+      await login(email.trim(), password);
     } catch (err: any) {
       setErrorMsg(err.message || 'Invalid email or password');
     } finally {
