@@ -22,6 +22,9 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
       const transporter = (gmailUser && gmailPass && !smtpHost)
         ? nodemailer.createTransport({
             service: 'gmail',
+            connectionTimeout: 5000,
+            greetingTimeout: 5000,
+            socketTimeout: 8000,
             auth: {
               user: gmailUser,
               pass: gmailPass.replace(/\s+/g, '') // remove spaces in app password

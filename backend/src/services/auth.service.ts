@@ -267,18 +267,16 @@ export class AuthService {
       </div>
     `;
 
-    // Dispatch real-time email
-    let emailSent = false;
-    try {
-      emailSent = await sendEmail(user.email, `Invitation to join ${business.name} on Shift Scheduler`, emailHtml);
-    } catch (emailErr: any) {
-      console.warn(`[Invite Email] Dispatch exception for ${user.email}:`, emailErr?.message || emailErr);
-    }
+    // Dispatch real-time email asynchronously in background
+    // (Never block HTTP response, preventing Vercel proxy from timing out with 502 Bad Gateway)
+    setImmediate(() => {
+      sendEmail(user.email, `Invitation to join ${business.name} on Shift Scheduler`, emailHtml).catch(emailErr => {
+        console.warn(`[Invite Email] Background dispatch exception for ${user.email}:`, emailErr?.message || emailErr);
+      });
+    });
 
     return {
-      message: emailSent 
-        ? `Invitation sent to ${user.email}!` 
-        : `Invitation generated for ${user.email}`,
+      message: `Invitation generated and dispatched to ${user.email}!`,
       user: {
         id: user.id,
         email: user.email,
