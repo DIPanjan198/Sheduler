@@ -22,7 +22,7 @@ export const Toast: React.FC<ToastProps> = ({ message, type = 'success', onClose
   const { bg, icon } = getColors();
 
   return (
-    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-[92%] max-w-md animate-bounce-short">
+    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[110] w-[92%] max-w-md animate-bounce-short">
       <div className={`flex items-center justify-between p-4 rounded-card border shadow-lifted ${bg}`}>
         <div className="flex items-center gap-3">
           {icon}
