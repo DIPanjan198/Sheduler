@@ -148,9 +148,9 @@ export const TeamView: React.FC = () => {
                 <span className="font-medium">{u.phone || 'No phone added'}</span>
               </div>
               {u.hourlyRate !== undefined && u.hourlyRate !== null && (
-                <div className="flex items-center gap-2 text-emerald-700 font-bold bg-emerald-50/60 px-2.5 py-1 rounded-lg border border-emerald-100/80 w-fit">
-                  <DollarSign className="w-3.5 h-3.5 shrink-0" />
-                  <span>${u.hourlyRate.toFixed(2)} / hour</span>
+                <div className="flex items-center gap-1.5 text-emerald-700 font-bold bg-emerald-50/60 px-2.5 py-1 rounded-lg border border-emerald-100/80 w-fit">
+                  <span className="text-xs font-black">₹</span>
+                  <span>{u.hourlyRate.toFixed(0)} / hr</span>
                 </div>
               )}
             </div>
@@ -237,37 +237,63 @@ export const TeamView: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Email Address</label>
-              <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full px-3 py-2 border rounded-btn text-sm" placeholder="employee@company.com" />
+              <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Phone Number (E.164 format for SMS)</label>
-              <input type="tel" required value={phone} onChange={e => setPhone(e.target.value)} className="w-full px-3 py-2 border rounded-btn text-sm" placeholder="+1555019922" />
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Mobile Number <span className="text-gray-400 font-normal">(WhatsApp / SMS)</span>
+              </label>
+              <div className="relative flex rounded-xl border border-gray-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all bg-white overflow-hidden">
+                {/* Indian Country Prefix Badge */}
+                <div className="flex items-center gap-1.5 px-3 bg-slate-50 border-r border-gray-200 select-none text-xs font-bold text-slate-700">
+                  <span className="text-base leading-none">🇮🇳</span>
+                  <span>+91</span>
+                </div>
+                {/* 10-digit Indian Mobile Input */}
+                <input
+                  type="tel"
+                  required
+                  maxLength={10}
+                  pattern="[6-9][0-9]{9}"
+                  value={phone.startsWith('+91') ? phone.slice(3) : phone}
+                  onChange={e => {
+                    const digitsOnly = e.target.value.replace(/\D/g, '');
+                    setPhone(digitsOnly ? `+91${digitsOnly}` : '');
+                  }}
+                  className="flex-1 px-3.5 py-2.5 text-sm text-slate-900 bg-transparent focus:outline-none tracking-wider font-medium"
+                  placeholder="98765 43210"
+                />
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1">Enter 10-digit Indian mobile number</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">Role</label>
-                <select value={role} onChange={e => setRole(e.target.value as any)} className="w-full px-3 py-2 border rounded-btn text-sm">
+                <select value={role} onChange={e => setRole(e.target.value as any)} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
                   <option value="EMPLOYEE">Employee</option>
                   <option value="MANAGER">Manager</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Hourly Rate ($)</label>
-                <input 
-                  type="text" 
-                  inputMode="decimal"
-                  value={hourlyRate} 
-                  onChange={e => {
-                    const val = e.target.value;
-                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                      setHourlyRate(val);
-                    }
-                  }} 
-                  className="w-full px-3 py-2 border rounded-btn text-sm focus:ring-2 focus:ring-indigo-500" 
-                  placeholder="e.g. 18.50" 
-                />
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Hourly Wage (₹)</label>
+                <div className="relative flex items-center">
+                  <span className="absolute left-3 text-gray-400 text-sm font-bold">₹</span>
+                  <input 
+                    type="text" 
+                    inputMode="decimal"
+                    value={hourlyRate} 
+                    onChange={e => {
+                      const val = e.target.value;
+                      if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                        setHourlyRate(val);
+                      }
+                    }} 
+                    className="w-full pl-7 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" 
+                    placeholder="250" 
+                  />
+                </div>
               </div>
             </div>
 

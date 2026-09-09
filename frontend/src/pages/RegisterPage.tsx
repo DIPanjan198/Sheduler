@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Building, Globe, User as UserIcon, ArrowRight, ArrowLeft, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { Logo } from '../components/ui/Logo';
 
 interface RegisterPageProps {
   onNavigateLogin: () => void;
@@ -13,7 +14,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin }) =
 
   // Step 1: Business Details
   const [businessName, setBusinessName] = useState('');
-  const [timezone, setTimezone] = useState('America/New_York');
+  const [timezone, setTimezone] = useState('Asia/Kolkata');
 
   // Step 2: Manager Details
   const [firstName, setFirstName] = useState('');
@@ -80,9 +81,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin }) =
         
         {/* Brand Header */}
         <div className="text-center space-y-2">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 text-white font-extrabold text-base flex items-center justify-center mx-auto shadow-md shadow-indigo-500/20 border border-white/20">
-            <span className="tracking-tight">SS</span>
-          </div>
+          <Logo size="lg" className="mx-auto" />
           <div>
             <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Create Business Account</h1>
             <p className="text-xs text-gray-500 font-semibold mt-0.5">
@@ -174,9 +173,27 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin }) =
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Phone Number (E.164 for SMS) <span className="text-rose-500">*</span>
+                  Mobile Number <span className="text-rose-500">*</span>
                 </label>
-                <input type="tel" required value={phone} onChange={e => setPhone(e.target.value)} className="w-full px-3.5 py-2.5 border rounded-xl text-sm bg-gray-50/50 focus:bg-white" />
+                <div className="relative flex rounded-xl border border-gray-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 bg-gray-50/50 focus-within:bg-white overflow-hidden transition-all">
+                  <div className="flex items-center gap-1.5 px-3 bg-slate-100/70 border-r border-gray-200 select-none text-xs font-bold text-slate-700">
+                    <span className="text-base leading-none">🇮🇳</span>
+                    <span>+91</span>
+                  </div>
+                  <input
+                    type="tel"
+                    required
+                    maxLength={10}
+                    pattern="[6-9][0-9]{9}"
+                    value={phone.startsWith('+91') ? phone.slice(3) : phone}
+                    onChange={e => {
+                      const digitsOnly = e.target.value.replace(/\D/g, '');
+                      setPhone(digitsOnly ? `+91${digitsOnly}` : '');
+                    }}
+                    className="flex-1 px-3.5 py-2.5 text-sm text-slate-900 bg-transparent focus:outline-none tracking-wider font-medium"
+                    placeholder="98765 43210"
+                  />
+                </div>
               </div>
 
               <div>

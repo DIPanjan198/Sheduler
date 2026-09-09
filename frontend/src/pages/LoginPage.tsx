@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
-import { Lock, Mail, Eye, EyeOff, ArrowRight, Users } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, ArrowRight, Users, Building } from 'lucide-react';
+import { Logo } from '../components/ui/Logo';
 
 interface LoginPageProps {
   onNavigateRegister: () => void;
@@ -9,6 +10,7 @@ interface LoginPageProps {
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister }) => {
   const { login } = useAuth();
+  const [portalMode, setPortalMode] = useState<'manager' | 'employee'>('manager');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -41,13 +43,45 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister }) => {
 
         {/* Brand Header */}
         <div className="text-center space-y-3">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 text-white font-extrabold text-2xl flex items-center justify-center mx-auto shadow-md shadow-indigo-500/25 border border-white/20">
-            <span className="tracking-tight">SS</span>
-          </div>
+          <Logo size="xl" className="mx-auto" />
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Shift Scheduler</h1>
             <p className="text-xs text-gray-500 mt-1 font-medium">Enterprise Staff Scheduling & Time Clock</p>
           </div>
+        </div>
+
+        {/* Segmented Switcher: Manager vs Employee */}
+        <div className="flex bg-gray-100 p-1 rounded-xl">
+          <button
+            type="button"
+            onClick={() => {
+              setPortalMode('manager');
+              setErrorMsg('');
+            }}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+              portalMode === 'manager'
+                ? 'bg-white text-indigo-700 shadow-sm'
+                : 'text-gray-500 hover:text-gray-800'
+            }`}
+          >
+            <Building className="w-3.5 h-3.5" />
+            <span>Manager Portal</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setPortalMode('employee');
+              setErrorMsg('');
+            }}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+              portalMode === 'employee'
+                ? 'bg-white text-indigo-700 shadow-sm'
+                : 'text-gray-500 hover:text-gray-800'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Employee Portal</span>
+          </button>
         </div>
 
         {errorMsg && (
@@ -61,7 +95,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister }) => {
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
               <Mail className="w-3.5 h-3.5 text-indigo-500" />
-              Email Address
+              {portalMode === 'manager' ? 'Manager Email' : 'Employee Email'}
             </label>
             <input
               type="email"
@@ -97,18 +131,38 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister }) => {
           </div>
 
           <Button type="submit" className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-md shadow-indigo-500/20 text-sm font-extrabold" isLoading={isLoading}>
-            <span>Sign In to Portal</span>
+            <span>{portalMode === 'manager' ? 'Sign In as Manager' : 'Sign In as Employee'}</span>
             <ArrowRight className="w-4 h-4 ml-1.5" />
           </Button>
         </form>
 
-        <div className="pt-3 border-t border-gray-100">
-          <div className="flex items-start gap-2.5 bg-indigo-50/70 border border-indigo-100 rounded-xl px-3.5 py-2.5">
-            <Users className="w-3.5 h-3.5 text-indigo-500 mt-0.5 shrink-0" />
-            <p className="text-xs text-indigo-700 font-medium leading-relaxed">
-              <span className="font-bold">Employees:</span> You join via an invite link sent by your manager. Contact your manager if you haven't received one.
-            </p>
-          </div>
+        <div className="pt-3 border-t border-gray-100 space-y-3">
+          {portalMode === 'manager' ? (
+            <div className="text-center">
+              <p className="text-xs text-gray-600 font-medium">
+                Want to register a new business?{' '}
+                <button
+                  type="button"
+                  onClick={onNavigateRegister}
+                  className="font-extrabold text-indigo-600 hover:text-indigo-700 hover:underline transition-colors"
+                >
+                  Register Business & Manager
+                </button>
+              </p>
+            </div>
+          ) : (
+            <div className="flex items-start gap-2.5 bg-amber-50/80 border border-amber-200/70 rounded-xl px-3.5 py-3">
+              <Users className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-amber-900">
+                  Employee Self-Registration is Disabled
+                </p>
+                <p className="text-[11px] text-amber-700 leading-relaxed font-medium">
+                  Employees cannot self-register. Your manager must send you an invitation link to your email to activate and set your password.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
       </div>

@@ -18,6 +18,7 @@ import { NoticeBoardView } from './components/notice/NoticeBoardView';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { AcceptInvitePage } from './pages/AcceptInvitePage';
+import { Logo } from './components/ui/Logo';
 
 const MainContent: React.FC = () => {
   const { user, toast, clearToast, isLoading } = useAuth();
@@ -63,9 +64,7 @@ const MainContent: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
         <AnimatedBackground />
         <div className="text-center space-y-4 relative z-10">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 animate-bounce mx-auto flex items-center justify-center text-white font-extrabold text-xl shadow-xl shadow-indigo-500/30 border border-white/20">
-            SS
-          </div>
+          <Logo size="xl" className="animate-bounce mx-auto" />
           <p className="text-xs text-slate-500 font-semibold tracking-widest uppercase">Loading Shift Scheduler...</p>
         </div>
       </div>
