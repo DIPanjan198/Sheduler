@@ -223,81 +223,85 @@ export const TeamView: React.FC = () => {
             </div>
           </div>
         ) : (
-          <form onSubmit={handleInvite} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">First Name</label>
-                <input type="text" required value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full px-3 py-2 border rounded-btn text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Last Name</label>
-                <input type="text" required value={lastName} onChange={e => setLastName(e.target.value)} className="w-full px-3 py-2 border rounded-btn text-sm" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Email Address</label>
-              <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Mobile Number <span className="text-gray-400 font-normal">(WhatsApp / SMS)</span>
-              </label>
-              <div className="relative flex rounded-xl border border-gray-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all bg-white overflow-hidden">
-                {/* Indian Country Prefix Badge */}
-                <div className="flex items-center gap-1.5 px-3 bg-slate-50 border-r border-gray-200 select-none text-xs font-bold text-slate-700">
-                  <span className="text-base leading-none">🇮🇳</span>
-                  <span>+91</span>
+          <form onSubmit={handleInvite} className="flex flex-col">
+            {/* Scrollable fields area */}
+            <div className="space-y-4 overflow-y-auto flex-1">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">First Name</label>
+                  <input type="text" required value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full px-3 py-2 border rounded-btn text-sm" />
                 </div>
-                {/* 10-digit Indian Mobile Input */}
-                <input
-                  type="tel"
-                  required
-                  maxLength={10}
-                  pattern="[6-9][0-9]{9}"
-                  value={phone.startsWith('+91') ? phone.slice(3) : phone}
-                  onChange={e => {
-                    const digitsOnly = e.target.value.replace(/\D/g, '');
-                    setPhone(digitsOnly ? `+91${digitsOnly}` : '');
-                  }}
-                  className="flex-1 px-3.5 py-2.5 text-sm text-slate-900 bg-transparent focus:outline-none tracking-wider font-medium"
-                  placeholder="98765 43210"
-                />
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Last Name</label>
+                  <input type="text" required value={lastName} onChange={e => setLastName(e.target.value)} className="w-full px-3 py-2 border rounded-btn text-sm" />
+                </div>
               </div>
-              <p className="text-[11px] text-gray-400 mt-1">Enter 10-digit Indian mobile number</p>
-            </div>
 
-            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Role</label>
-                <select value={role} onChange={e => setRole(e.target.value as any)} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
-                  <option value="EMPLOYEE">Employee</option>
-                  <option value="MANAGER">Manager</option>
-                </select>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Email Address</label>
+                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" />
               </div>
+
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Hourly Wage (₹)</label>
-                <div className="relative flex items-center">
-                  <span className="absolute left-3 text-gray-400 text-sm font-bold">₹</span>
-                  <input 
-                    type="text" 
-                    inputMode="decimal"
-                    value={hourlyRate} 
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Mobile Number <span className="text-gray-400 font-normal">(WhatsApp / SMS)</span>
+                </label>
+                <div className="relative flex rounded-xl border border-gray-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all bg-white overflow-hidden">
+                  {/* Indian Country Prefix Badge */}
+                  <div className="flex items-center gap-1.5 px-3 bg-slate-50 border-r border-gray-200 select-none text-xs font-bold text-slate-700">
+                    <span className="text-base leading-none">🇮🇳</span>
+                    <span>+91</span>
+                  </div>
+                  {/* 10-digit Indian Mobile Input */}
+                  <input
+                    type="tel"
+                    required
+                    maxLength={10}
+                    pattern="[6-9][0-9]{9}"
+                    value={phone.startsWith('+91') ? phone.slice(3) : phone}
                     onChange={e => {
-                      const val = e.target.value;
-                      if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                        setHourlyRate(val);
-                      }
-                    }} 
-                    className="w-full pl-7 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" 
-                    placeholder="250" 
+                      const digitsOnly = e.target.value.replace(/\D/g, '');
+                      setPhone(digitsOnly ? `+91${digitsOnly}` : '');
+                    }}
+                    className="flex-1 px-3.5 py-2.5 text-sm text-slate-900 bg-transparent focus:outline-none tracking-wider font-medium"
+                    placeholder="98765 43210"
                   />
                 </div>
+                <p className="text-[11px] text-gray-400 mt-1">Enter 10-digit Indian mobile number</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Role</label>
+                  <select value={role} onChange={e => setRole(e.target.value as any)} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                    <option value="EMPLOYEE">Employee</option>
+                    <option value="MANAGER">Manager</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Hourly Wage (₹)</label>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3 text-gray-400 text-sm font-bold">₹</span>
+                    <input 
+                      type="text" 
+                      inputMode="decimal"
+                      value={hourlyRate} 
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                          setHourlyRate(val);
+                        }
+                      }} 
+                      className="w-full pl-7 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" 
+                      placeholder="250" 
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t">
+            {/* Sticky action buttons — always visible at bottom */}
+            <div className="flex items-center justify-end gap-2 pt-3 mt-3 border-t bg-white sticky bottom-0">
               <Button type="button" variant="ghost" onClick={handleCloseModal}>Cancel</Button>
               <Button type="submit" isLoading={isSubmitting}>Send Invite</Button>
             </div>
