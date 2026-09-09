@@ -16,7 +16,7 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
   // 1. Direct Gmail SMTP / Nodemailer Transport (if credentials or host provided)
   if ((gmailUser && gmailPass) || smtpHost) {
     try {
-      const transporter = (gmailUser && !smtpHost)
+      const transporter = (gmailUser && gmailPass && !smtpHost)
         ? nodemailer.createTransport({
             service: 'gmail',
             auth: {
