@@ -6,12 +6,15 @@ import https from 'https';
  * Supports Direct Gmail SMTP (Google App Passwords), Custom SMTP, SendGrid REST API, and Console Sandbox
  */
 export async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
-  const gmailUser = process.env.GMAIL_USER || process.env.SMTP_USER;
-  const gmailPass = process.env.GMAIL_PASS || process.env.SMTP_PASS;
-  const smtpHost = process.env.SMTP_HOST;
+  const rawGmailUser = process.env.GMAIL_USER || process.env.SMTP_USER;
+  const rawGmailPass = process.env.GMAIL_PASS || process.env.SMTP_PASS;
+  const gmailUser = rawGmailUser ? rawGmailUser.trim().replace(/^["']|["']$/g, '') : undefined;
+  const gmailPass = rawGmailPass ? rawGmailPass.trim().replace(/^["']|["']$/g, '').replace(/\s+/g, '') : undefined;
+  const smtpHost = process.env.SMTP_HOST ? process.env.SMTP_HOST.trim().replace(/^["']|["']$/g, '') : undefined;
   const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
   const smtpSecure = process.env.SMTP_SECURE === 'true' || smtpPort === 465;
-  const senderEmail = process.env.SENDER_EMAIL || (gmailUser ? gmailUser : 'noreply@shiftscheduler.com');
+  const rawSender = process.env.SENDER_EMAIL ? process.env.SENDER_EMAIL.trim().replace(/^["']|["']$/g, '') : undefined;
+  const senderEmail = rawSender || (gmailUser ? gmailUser : 'noreply@shiftscheduler.com');
 
   // 1. Direct Gmail SMTP / Nodemailer Transport (if credentials or host provided)
   if ((gmailUser && gmailPass) || smtpHost) {
