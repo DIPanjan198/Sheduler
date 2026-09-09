@@ -1,0 +1,160 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Business {
+  id                      String             @id @default(auto()) @map("_id") @db.ObjectId
+  name                    String
+  timezone                String             @default("America/New_York")
+  address                 String?
+  reminderLeadTimeMinutes Int                @default(120)
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+  users                   User[]
+  shifts                  Shift[]
+  timeOffRequests         TimeOffRequest[]
+  timeClockEntries        TimeClockEntry[]
+  notices                 Notice[]
+}
+
+model User {
+  id                    String             @id @default(auto()) @map("_id") @db.ObjectId
+  businessId            String             @db.ObjectId
+  business              Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  role                  String             @default("EMPLOYEE")
+  firstName             String
+  lastName              String
+  email                 String             @unique
+  phone                 String
+  passwordHash          String
+  notificationPrefs     String             @default("{\"smsEnabled\":true,\"emailEnabled\":true}")
+  status                String             @default("ACTIVE")
+  hourlyRate            Float?
+  inviteToken           String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  assignedShifts        Shift[]            @relation("AssignedShifts")
+  createdShifts         Shift[]            @relation("CreatedShifts")
+  timeOffRequests       TimeOffRequest[]   @relation("EmployeeTimeOff")
+  reviewedTimeOff       TimeOffRequest[]   @relation("ManagerTimeOffReview")
+  
+  requestedSwaps        ShiftSwapRequest[] @relation("RequestedSwaps")
+  targetedSwaps         ShiftSwapRequest[] @relation("TargetedSwaps")
+  claimedSwaps          ShiftSwapRequest[] @relation("ClaimedSwaps")
+  reviewedSwaps         ShiftSwapRequest[] @relation("ReviewedSwaps")
+
+  timeClockEntries      TimeClockEntry[]
+  notifications         Notification[]
+  notices               Notice[]
+}
+
+model Shift {
+  id               String             @id @default(auto()) @map("_id") @db.ObjectId
+  businessId       String             @db.ObjectId
+  business         Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  assignedUserId   String?            @db.ObjectId
+  assignedUser     User?              @relation("AssignedShifts", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  title            String
+  startAt          DateTime
+  endAt            DateTime
+  breakMinutes     Int                @default(0)
+  status           String             @default("SCHEDULED")
+  notes            String?
+  createdBy        String             @db.ObjectId
+  creator          User               @relation("CreatedShifts", fields: [createdBy], references: [id])
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  swapRequests     ShiftSwapRequest[]
+  timeClockEntries TimeClockEntry[]
+}
+
+model TimeOffRequest {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String    @db.ObjectId
+  user        User      @relation("EmployeeTimeOff", fields: [userId], references: [id], onDelete: Cascade)
+  businessId  String    @db.ObjectId
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  startDate   String
+  endDate     String
+  reason      String?
+  status      String    @default("PENDING")
+  reviewedBy  String?   @db.ObjectId
+  reviewer    User?     @relation("ManagerTimeOffReview", fields: [reviewedBy], references: [id])
+  reviewedAt  DateTime?
+  managerNote String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model ShiftSwapRequest {
+  id                String    @id @default(auto()) @map("_id") @db.ObjectId
+  originalShiftId   String    @db.ObjectId
+  originalShift     Shift     @relation(fields: [originalShiftId], references: [id], onDelete: Cascade)
+  requestedByUserId String    @db.ObjectId
+  requestedByUser   User      @relation("RequestedSwaps", fields: [requestedByUserId], references: [id], onDelete: Cascade)
+  targetUserId      String?   @db.ObjectId
+  targetUser        User?     @relation("TargetedSwaps", fields: [targetUserId], references: [id])
+  claimedByUserId   String?   @db.ObjectId
+  claimedByUser     User?     @relation("ClaimedSwaps", fields: [claimedByUserId], references: [id])
+  status            String    @default("OPEN")
+  reviewedBy        String?   @db.ObjectId
+  reviewer          User?     @relation("ReviewedSwaps", fields: [reviewedBy], references: [id])
+  reviewedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model TimeClockEntry {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String    @db.ObjectId
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessId       String    @db.ObjectId
+  business         Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  shiftId          String?   @db.ObjectId
+  shift            Shift?    @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  clockInAt        DateTime
+  clockOutAt       DateTime?
+  clockInLocation  String?
+  editedByManager  Boolean   @default(false)
+  originalClockIn  DateTime?
+  originalClockOut DateTime?
+  editReason       String?
+  status           String    @default("ACTIVE")
+  flagReason       String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model Notification {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String    @db.ObjectId
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  channel   String    @default("SMS")
+  payload   String
+  status    String    @default("SENT")
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Notice {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  businessId  String   @db.ObjectId
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  authorId    String   @db.ObjectId
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  title       String
+  content     String
+  priority    String   @default("NORMAL")
+  isPinned    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
