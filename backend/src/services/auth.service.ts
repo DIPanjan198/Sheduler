@@ -160,7 +160,7 @@ export class AuthService {
     role?: 'EMPLOYEE' | 'MANAGER';
     hourlyRate?: number | string;
   }, origin?: string) {
-    let business = null;
+    let business: any = null;
     try {
       if (businessId) {
         business = await prisma.business.findUnique({ where: { id: businessId } });
@@ -186,7 +186,7 @@ export class AuthService {
 
     const inviteToken = crypto.randomBytes(32).toString('hex');
     const existing = await prisma.user.findUnique({ where: { email: cleanEmail } });
-    let user;
+    let user: any = null;
 
     if (existing) {
       if (existing.status === 'ACTIVE') {
@@ -267,11 +267,14 @@ export class AuthService {
       </div>
     `;
 
+    const recipientEmail: string = user.email;
+    const currentBusinessName: string = business.name;
+
     // Dispatch real-time email asynchronously in background
     // (Never block HTTP response, preventing Vercel proxy from timing out with 502 Bad Gateway)
     setImmediate(() => {
-      sendEmail(user.email, `Invitation to join ${business.name} on Shift Scheduler`, emailHtml).catch(emailErr => {
-        console.warn(`[Invite Email] Background dispatch exception for ${user.email}:`, emailErr?.message || emailErr);
+      sendEmail(recipientEmail, `Invitation to join ${currentBusinessName} on Shift Scheduler`, emailHtml).catch((emailErr: any) => {
+        console.warn(`[Invite Email] Background dispatch exception for ${recipientEmail}:`, emailErr?.message || emailErr);
       });
     });
 
