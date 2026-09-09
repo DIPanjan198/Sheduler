@@ -6,9 +6,10 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  footer?: React.ReactNode;
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -28,10 +29,10 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
       <div 
-        className="bg-white w-full sm:max-w-lg rounded-t-[20px] sm:rounded-card shadow-lifted border border-gray-100 overflow-hidden transform transition-all max-h-[90vh] flex flex-col"
+        className="bg-white w-full sm:max-w-lg rounded-t-[20px] sm:rounded-card shadow-lifted border border-gray-100 overflow-hidden transform transition-all max-h-[85vh] max-h-[85dvh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/50">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/50 shrink-0">
           <h3 className="text-lg font-bold text-gray-900">{title}</h3>
           <button
             onClick={onClose}
@@ -40,9 +41,14 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-5 overflow-y-auto flex-1">
+        <div className="p-5 overflow-y-auto flex-1 min-h-0">
           {children}
         </div>
+        {footer && (
+          <div className="px-5 py-3.5 border-t border-gray-100 bg-white shrink-0 pb-6 sm:pb-3.5">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );
