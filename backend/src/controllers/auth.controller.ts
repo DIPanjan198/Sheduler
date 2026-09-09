@@ -71,53 +71,45 @@ export class AuthController {
   }
 
   static async testEmail(req: AuthRequest, res: Response) {
-    const gmailUser = (process.env.GMAIL_USER || '').trim().replace(/^["']|["']$/g, '');
-    const gmailPass = (process.env.GMAIL_PASS || '').trim().replace(/^["']|["']$/g, '').replace(/\s+/g, '');
-    const to = req.user?.email || gmailUser;
-
-    const diagnostics: any = {
-      env: {
-        GMAIL_USER: gmailUser ? `${gmailUser.substring(0, 5)}...` : 'NOT SET',
-        GMAIL_PASS_LENGTH: gmailPass.length,
-        GMAIL_PASS_CHARS: gmailPass.length === 16 ? '16 chars (correct app password length)' : `${gmailPass.length} chars (expected 16 for app password)`,
-        FRONTEND_URL: process.env.FRONTEND_URL || 'NOT SET',
-      },
-      smtpTest: null as any,
-      error: null as any
-    };
-
-    if (!gmailUser || !gmailPass) {
-      return res.status(400).json({ error: 'GMAIL_USER or GMAIL_PASS not set in environment', diagnostics });
+    const to = req.user?.email || (process.env.GMAIL_USER || '').trim();
+    if (!to) {
+      return res.status(400).json({ error: 'Could not determine recipient email from auth token' });
     }
 
+    // Show which providers are configured
+    const resendKey = (process.env.RESEND_API_KEY || '').trim();
+    const sgKey = (process.env.SENDGRID_API_KEY || '').trim();
+    const gmailUser = (process.env.GMAIL_USER || '').trim();
+    const gmailPass = (process.env.GMAIL_PASS || '').trim();
+
+    const envDiagnostics = {
+      RESEND_API_KEY: resendKey ? (resendKey.startsWith('re_') ? `✅ Set (${resendKey.substring(0, 8)}...)` : `⚠️ Set but doesn't start with re_`) : '❌ NOT SET',
+      SENDGRID_API_KEY: sgKey ? (sgKey.startsWith('SG.') ? `✅ Set` : `⚠️ Set but doesn't start with SG.`) : '❌ NOT SET',
+      GMAIL_USER: gmailUser ? `✅ Set (${gmailUser.substring(0, 5)}...)` : '❌ NOT SET',
+      GMAIL_PASS: gmailPass ? `✅ Set (length: ${gmailPass.replace(/\s+/g,'').length} chars)` : '❌ NOT SET',
+      FRONTEND_URL: process.env.FRONTEND_URL || '❌ NOT SET',
+      SENDER_EMAIL: process.env.SENDER_EMAIL || '❌ NOT SET',
+      willUseFallbackSandbox: !resendKey && !sgKey && !(gmailUser && gmailPass)
+    };
+
+    console.log('[Test Email] Environment diagnostics:', JSON.stringify(envDiagnostics, null, 2));
+
     try {
-      const transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true,
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 15000,
-        auth: { user: gmailUser, pass: gmailPass },
-        tls: { rejectUnauthorized: false }
-      });
-
-      await transporter.verify();
-      diagnostics.smtpTest = 'SMTP connection verified successfully';
-
-      const info = await transporter.sendMail({
-        from: `"Shift Scheduler Test" <${gmailUser}>`,
+      const result = await sendEmail(
         to,
-        subject: 'Shift Scheduler - SMTP Test Email',
-        html: `<p>This is a test email sent at ${new Date().toISOString()}. If you received this, email delivery is working correctly.</p>`
+        'Shift Scheduler — SMTP Test',
+        `<p>This is a test email sent at <strong>${new Date().toISOString()}</strong>.<br/>If you received this, email delivery is working correctly for <em>${to}</em>.</p>`
+      );
+      return res.json({
+        success: result,
+        sentTo: to,
+        env: envDiagnostics,
+        note: envDiagnostics.willUseFallbackSandbox
+          ? 'WARNING: Using Ethereal sandbox — email NOT delivered to real inbox. Add RESEND_API_KEY to Render environment variables.'
+          : 'Real email provider used. Check recipient inbox (and spam folder).'
       });
-
-      diagnostics.messageId = info.messageId;
-      return res.json({ success: true, message: `Test email sent to ${to}`, diagnostics });
     } catch (err: any) {
-      diagnostics.error = err.message || String(err);
-      console.error('[Test Email] SMTP error:', err.message || err);
-      return res.status(500).json({ success: false, error: err.message || 'SMTP test failed', diagnostics });
+      return res.status(500).json({ success: false, error: err.message, env: envDiagnostics });
     }
   }
 }
