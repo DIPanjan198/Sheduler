@@ -92,7 +92,8 @@ export class UserService {
   static async removeUser(businessId: string, userId: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
-      throw { status: 404, code: 'USER_NOT_FOUND', message: 'Employee not found' };
+      // User is already deleted or not found — return success idempotently
+      return { message: 'Employee removed permanently' };
     }
     if (user.businessId !== businessId) {
       throw { status: 403, code: 'FORBIDDEN', message: 'User does not belong to your business' };

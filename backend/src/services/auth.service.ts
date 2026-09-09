@@ -178,13 +178,18 @@ export class AuthService {
       }
     }
 
+    const cleanEmail = data.email ? data.email.trim().toLowerCase() : '';
+    if (!cleanEmail) {
+      throw { status: 400, code: 'EMAIL_REQUIRED', message: 'Valid email address is required' };
+    }
+
     const inviteToken = crypto.randomBytes(32).toString('hex');
-    const existing = await prisma.user.findUnique({ where: { email: data.email } });
+    const existing = await prisma.user.findUnique({ where: { email: cleanEmail } });
     let user;
 
     if (existing) {
       if (existing.status === 'ACTIVE') {
-        throw { status: 400, code: 'USER_ACTIVE', message: `An active account already exists for email address ${data.email}.` };
+        throw { status: 400, code: 'USER_ACTIVE', message: `An active account already exists for email address ${cleanEmail}.` };
       }
       
       // Update existing invited/disabled user with fresh invite details & token
@@ -208,7 +213,7 @@ export class AuthService {
           businessId,
           firstName: data.firstName,
           lastName: data.lastName,
-          email: data.email,
+          email: cleanEmail,
           phone: data.phone,
           passwordHash: dummyHash,
           role: data.role || 'EMPLOYEE',

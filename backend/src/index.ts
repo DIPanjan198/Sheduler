@@ -52,6 +52,15 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   });
 });
 
+// Process safety: Prevent background errors from crashing the Node.js process (502 Bad Gateway)
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Process] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[Process] Uncaught Exception:', err);
+});
+
 // Start Server & Background Cron Jobs
 async function startServer() {
   await initDb();
