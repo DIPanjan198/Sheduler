@@ -270,13 +270,25 @@ export class AuthService {
     const recipientEmail: string = user.email;
     const currentBusinessName: string = business.name;
 
-    // Dispatch real-time email asynchronously in background
-    // (Never block HTTP response, preventing Vercel proxy from timing out with 502 Bad Gateway)
-    setImmediate(() => {
-      sendEmail(recipientEmail, `Invitation to join ${currentBusinessName} on Shift Scheduler`, emailHtml).catch((emailErr: any) => {
-        console.warn(`[Invite Email] Background dispatch exception for ${recipientEmail}:`, emailErr?.message || emailErr);
-      });
-    });
+    // Send email synchronously before responding — this guarantees delivery.
+    // setImmediate/background dispatch was causing intermittent failures because
+    // the process can be suspended by the cloud host right after the HTTP response.
+    // A 15-second timeout prevents the invite API from hanging if the mail provider is slow.
+    try {
+      const emailTimeout = new Promise<boolean>((_, reject) =>
+        setTimeout(() => reject(new Error('Email send timed out after 15s')), 15000)
+      );
+      const sent = await Promise.race([
+        sendEmail(recipientEmail, `Invitation to join ${currentBusinessName} on Shift Scheduler`, emailHtml),
+        emailTimeout
+      ]);
+      if (!sent) {
+        console.warn(`[Invite Email] Provider returned false for ${recipientEmail} — check mail configuration`);
+      }
+    } catch (emailErr: any) {
+      // Log but don't throw — invite record is already saved in DB, manager can re-send
+      console.error(`[Invite Email] Failed to dispatch to ${recipientEmail}:`, emailErr?.message || emailErr);
+    }
 
     return {
       message: `Invitation generated and dispatched to ${user.email}!`,

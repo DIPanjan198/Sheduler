@@ -19,9 +19,14 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
   const resendApiKey = (process.env.RESEND_API_KEY || '').trim().replace(/^["']|["']$/g, '');
   if (resendApiKey && resendApiKey.startsWith('re_')) {
     try {
-      // Resend free plan requires 'onboarding@resend.dev' as from address
-      // unless you have verified your own domain in Resend dashboard
-      const fromEmail = 'onboarding@resend.dev';
+      // IMPORTANT: 'onboarding@resend.dev' only works when sending to the
+      // Resend account owner's own email — it will silently fail for all other
+      // recipients. Set RESEND_FROM_EMAIL to a verified domain address to fix this.
+      const fromEmail = (process.env.RESEND_FROM_EMAIL || '').trim().replace(/^["']|["']$/g, '') || 'onboarding@resend.dev';
+      if (fromEmail === 'onboarding@resend.dev') {
+        console.warn('[Resend Mailer] WARNING: Using onboarding@resend.dev — emails will ONLY deliver to your Resend account email. Set RESEND_FROM_EMAIL=noreply@yourdomain.com (verified in Resend dashboard) to send to any recipient.');
+      }
+
       const payload = JSON.stringify({
         from: `${senderName} <${fromEmail}>`,
         to: [to],
@@ -89,11 +94,16 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
             'Content-Length': Buffer.byteLength(payload)
           }
         }, (res) => {
-          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-            resolve();
-          } else {
-            reject(new Error(`SendGrid API error HTTP ${res.statusCode}`));
-          }
+          // Must consume body to prevent socket hang
+          let body = '';
+          res.on('data', (chunk) => { body += chunk; });
+          res.on('end', () => {
+            if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+              resolve();
+            } else {
+              reject(new Error(`SendGrid API error HTTP ${res.statusCode}: ${body}`));
+            }
+          });
         });
         req.on('error', reject);
         req.write(payload);
