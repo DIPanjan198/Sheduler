@@ -103,13 +103,14 @@ export const TeamView: React.FC = () => {
   };
 
   const handleDisable = async (id: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to disable ${name}'s account?`)) return;
+    if (!window.confirm(`Are you sure you want to disable ${name}'s account? They will no longer be able to log in.`)) return;
     
     // Optimistic UI update
     setUsers(prev => prev.map(u => u.id === id ? { ...u, status: 'DISABLED' as const } : u));
     try {
-      await api.request(`/users/${id}?permanent=false`, { method: 'DELETE' });
+      await api.request(`/users/${id}/disable`, { method: 'POST' });
       showToast(`Employee ${name} account disabled`);
+      await loadTeam();
     } catch (err: any) {
       loadTeam();
       showToast(err.message || 'Failed to disable employee', 'error');
@@ -117,7 +118,7 @@ export const TeamView: React.FC = () => {
   };
 
   const handleRemove = async (id: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to PERMANENTLY REMOVE ${name} from your business team? This action cannot be undone.`)) return;
+    if (!window.confirm(`Are you sure you want to PERMANENTLY DELETE ${name} from your business? This will remove all their records permanently.`)) return;
     
     // Mark as deleting BEFORE optimistic removal so polling doesn't re-add it
     deletingIds.current.add(id);
@@ -125,14 +126,15 @@ export const TeamView: React.FC = () => {
     setUsers(prev => prev.filter(u => u.id !== id));
 
     try {
-      await api.request(`/users/${id}?permanent=true`, { method: 'DELETE' });
-      showToast(`Employee ${name} removed permanently from team`);
+      // Direct DELETE request - server permanently deletes by default
+      await api.request(`/users/${id}`, { method: 'DELETE' });
+      showToast(`Employee ${name} permanently deleted from team`);
       // Sync with server to confirm deletion
       await loadTeam();
     } catch (err: any) {
       // Rollback on failure
       setUsers(previousUsers);
-      showToast(err.message || 'Failed to remove employee', 'error');
+      showToast(err.message || 'Failed to delete employee', 'error');
     } finally {
       // Always clear the deleting flag
       deletingIds.current.delete(id);
@@ -217,12 +219,12 @@ export const TeamView: React.FC = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-100"
+                    className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-100 font-semibold"
                     icon={<Trash2 className="w-3.5 h-3.5 text-rose-600" />}
                     onClick={() => handleRemove(u.id, `${u.firstName} ${u.lastName}`)}
-                    title="Remove employee permanently from business"
+                    title="Permanently delete employee from business"
                   >
-                    Remove
+                    Delete
                   </Button>
                 </div>
               ) : (

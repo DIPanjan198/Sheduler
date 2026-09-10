@@ -101,19 +101,36 @@ export class UserService {
 
     // Run all relational cleanups in parallel for maximum speed
     await Promise.all([
+      // 1. Unassign user from any scheduled/completed shifts
       prisma.shift.updateMany({
         where: { assignedUserId: userId },
         data: { assignedUserId: null }
       }),
+      // 2. Remove shifts created by this user (if any)
+      prisma.shift.deleteMany({
+        where: { createdBy: userId }
+      }),
+      // 3. Delete time clock entries
       prisma.timeClockEntry.deleteMany({ where: { userId } }),
+      // 4. Delete notifications
       prisma.notification.deleteMany({ where: { userId } }),
+      // 5. Delete notices authored by this user
+      prisma.notice.deleteMany({ where: { authorId: userId } }),
+      // 6. Delete time off requests requested by this user
       prisma.timeOffRequest.deleteMany({ where: { userId } }),
+      // 7. Clear reviewer references on time off requests
+      prisma.timeOffRequest.updateMany({
+        where: { reviewedBy: userId },
+        data: { reviewedBy: null }
+      }),
+      // 8. Delete shift swap requests requested, targeted, claimed, or reviewed
       prisma.shiftSwapRequest.deleteMany({
         where: {
           OR: [
             { requestedByUserId: userId },
             { targetUserId: userId },
-            { claimedByUserId: userId }
+            { claimedByUserId: userId },
+            { reviewedBy: userId }
           ]
         }
       })

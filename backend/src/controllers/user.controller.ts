@@ -50,18 +50,37 @@ export class UserController {
         return res.status(400).json({ error: { code: 'CANNOT_REMOVE_SELF', message: 'You cannot remove your own manager account' } });
       }
 
-      const isPermanent = req.query.permanent === 'true' || req.query.mode === 'remove';
+      // Check if caller explicitly requested disable only
+      const isExplicitDisable = req.query.permanent === 'false' || req.query.action === 'disable' || req.query.mode === 'disable';
 
-      if (isPermanent) {
-        await UserService.removeUser(req.user.businessId, targetUserId);
-        return res.json({ message: 'Employee removed permanently' });
-      } else {
+      if (isExplicitDisable) {
         await UserService.disableUser(targetUserId);
         return res.json({ message: 'Employee account disabled successfully' });
       }
+
+      // Default: permanent removal
+      await UserService.removeUser(req.user.businessId, targetUserId);
+      return res.json({ message: 'Employee removed permanently' });
     } catch (err: any) {
       const status = err.status || 500;
       return res.status(status).json({ error: { code: err.code || 'DELETE_FAILED', message: err.message || 'Failed to remove user' } });
+    }
+  }
+
+  static async disable(req: AuthRequest, res: Response) {
+    try {
+      const targetUserId = req.params.id;
+      if (!req.user) return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Auth required' } });
+
+      if (req.user.userId === targetUserId) {
+        return res.status(400).json({ error: { code: 'CANNOT_DISABLE_SELF', message: 'You cannot disable your own manager account' } });
+      }
+
+      await UserService.disableUser(targetUserId);
+      return res.json({ message: 'Employee account disabled successfully' });
+    } catch (err: any) {
+      const status = err.status || 500;
+      return res.status(status).json({ error: { code: err.code || 'DISABLE_FAILED', message: err.message || 'Failed to disable user' } });
     }
   }
 }
