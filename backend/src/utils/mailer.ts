@@ -119,9 +119,58 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // 3. GMAIL SMTP - tries port 587 (STARTTLS) first, then 465 (SSL)
+  // 3. BREVO / SENDINBLUE REST API (HTTPS port 443 — free 300 emails/day)
+  //    Works on all cloud platforms including Render without a custom domain!
+  // ─────────────────────────────────────────────────────────────────
+  const brevoApiKey = (process.env.BREVO_API_KEY || '').trim();
+  if (brevoApiKey && brevoApiKey.startsWith('xkeysib-')) {
+    try {
+      const fromEmail = (process.env.BREVO_SENDER_EMAIL || process.env.SENDER_EMAIL || 'noreply@shiftscheduler.com').trim();
+      const payload = JSON.stringify({
+        sender: { name: senderName, email: fromEmail },
+        to: [{ email: to }],
+        subject,
+        htmlContent: html
+      });
+
+      await new Promise<void>((resolve, reject) => {
+        const req = https.request({
+          hostname: 'api.brevo.com',
+          port: 443,
+          path: '/v3/smtp/email',
+          method: 'POST',
+          headers: {
+            'api-key': brevoApiKey,
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(payload)
+          }
+        }, (res) => {
+          let body = '';
+          res.on('data', (chunk) => { body += chunk; });
+          res.on('end', () => {
+            if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+              resolve();
+            } else {
+              reject(new Error(`Brevo API error HTTP ${res.statusCode}: ${body}`));
+            }
+          });
+        });
+        req.on('error', reject);
+        req.write(payload);
+        req.end();
+      });
+
+      console.log(`[Brevo Mailer] Email delivered to ${to}`);
+      return true;
+    } catch (err: any) {
+      console.warn(`[Brevo Error] Failed to send to ${to}:`, err.message || err);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // 4. GMAIL SMTP - tries port 587 (STARTTLS) first, then 465 (SSL)
   //    NOTE: On Render and most cloud hosts, ALL SMTP ports are blocked.
-  //    If this fails, set RESEND_API_KEY in Render env vars.
+  //    If this fails, set RESEND_API_KEY or BREVO_API_KEY in Render env vars.
   // ─────────────────────────────────────────────────────────────────
   const gmailUser = (process.env.GMAIL_USER || process.env.SMTP_USER || '').trim().replace(/^["']|["']$/g, '');
   const gmailPass = (process.env.GMAIL_PASS || process.env.SMTP_PASS || '').trim().replace(/^["']|["']$/g, '').replace(/\s+/g, '');
@@ -141,9 +190,9 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
           port,
           secure,
           requireTLS: !secure,
-          connectionTimeout: 8000,
-          greetingTimeout: 8000,
-          socketTimeout: 10000,
+          connectionTimeout: 4000,
+          greetingTimeout: 4000,
+          socketTimeout: 5000,
           auth: (gmailUser && gmailPass) ? { user: gmailUser, pass: gmailPass } : undefined,
           tls: { rejectUnauthorized: false }
         });
@@ -161,11 +210,11 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
         console.warn(`[Gmail SMTP port ${port}] Failed for ${to}:`, err.message || err);
       }
     }
-    console.error(`[Gmail SMTP] All ports failed - SMTP is likely blocked by your cloud host. Add RESEND_API_KEY to your Render environment variables.`);
+    console.error(`[Gmail SMTP] All ports failed - SMTP is blocked by your cloud host. Use an HTTPS provider (Resend or Brevo).`);
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // 4. ETHEREAL SANDBOX (development preview — not real delivery)
+  // 5. ETHEREAL SANDBOX (development preview — not real delivery)
   // ─────────────────────────────────────────────────────────────────
   try {
     const testAccount = await nodemailer.createTestAccount();
@@ -188,9 +237,10 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
     console.log(`📧 [SANDBOX EMAIL — NOT delivered to real inbox]`);
     console.log(`   To: ${to}`);
     if (previewUrl) console.log(`   🌐 Preview: ${previewUrl}`);
-    console.log(`   💡 Add RESEND_API_KEY to Render env vars for real delivery`);
+    console.log(`   💡 Configure a real HTTPS mail provider on Render for inbox delivery`);
     console.log(`=======================================================`);
-    return true;
+    // Return false because real delivery did not happen
+    return false;
   } catch (etherealErr: any) {
     console.warn(`[Ethereal Fallback Warning]:`, etherealErr.message);
   }

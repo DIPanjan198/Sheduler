@@ -278,6 +278,7 @@ export class AuthService {
     // setImmediate/background dispatch was causing intermittent failures because
     // the process can be suspended by the cloud host right after the HTTP response.
     // A 15-second timeout prevents the invite API from hanging if the mail provider is slow.
+    let emailSent = false;
     try {
       const emailTimeout = new Promise<boolean>((_, reject) =>
         setTimeout(() => reject(new Error('Email send timed out after 15s')), 15000)
@@ -286,16 +287,20 @@ export class AuthService {
         sendEmail(recipientEmail, `Invitation to join ${currentBusinessName} on Shift Scheduler`, emailHtml),
         emailTimeout
       ]);
-      if (!sent) {
+      emailSent = Boolean(sent);
+      if (!emailSent) {
         console.warn(`[Invite Email] Provider returned false for ${recipientEmail} — check mail configuration`);
       }
     } catch (emailErr: any) {
-      // Log but don't throw — invite record is already saved in DB, manager can re-send
       console.error(`[Invite Email] Failed to dispatch to ${recipientEmail}:`, emailErr?.message || emailErr);
+      emailSent = false;
     }
 
     return {
-      message: `Invitation generated and dispatched to ${user.email}!`,
+      emailSent,
+      message: emailSent
+        ? `Invitation email dispatched to ${user.email}!`
+        : `Invitation generated! Share the activation link with ${user.firstName}.`,
       user: {
         id: user.id,
         email: user.email,

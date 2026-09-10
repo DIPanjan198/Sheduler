@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { StatusChip } from '../ui/StatusChip';
-import { Users, UserPlus, DollarSign, Mail, Phone, ShieldOff, Copy, CheckCircle2, Link, Trash2 } from 'lucide-react';
+import { Users, UserPlus, DollarSign, Mail, Phone, ShieldOff, Copy, CheckCircle2, Link, Trash2, Share2, AlertTriangle } from 'lucide-react';
 import { useDataSync } from '../../hooks/useDataSync';
 
 export const TeamView: React.FC = () => {
@@ -22,6 +22,7 @@ export const TeamView: React.FC = () => {
 
   // Created Invite Link State
   const [createdInviteUrl, setCreatedInviteUrl] = useState<string | null>(null);
+  const [emailDelivered, setEmailDelivered] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -72,7 +73,9 @@ export const TeamView: React.FC = () => {
           hourlyRate: parseFloat(hourlyRate) || 0 
         })
       });
-      showToast(res.message || `Invitation dispatched to ${email}!`);
+      const delivered = Boolean(res.emailSent);
+      setEmailDelivered(delivered);
+      showToast(res.message || (delivered ? `Invitation emailed to ${email}!` : `Invite link ready for ${firstName}!`));
       
       const inviteUrl = res.user?.inviteUrl || `${window.location.origin}/accept-invite?token=${res.user?.inviteToken}`;
       setCreatedInviteUrl(inviteUrl);
@@ -95,6 +98,7 @@ export const TeamView: React.FC = () => {
   const handleCloseModal = () => {
     setIsInviteOpen(false);
     setCreatedInviteUrl(null);
+    setEmailDelivered(false);
     setFirstName('');
     setLastName('');
     setEmail('');
@@ -264,25 +268,65 @@ export const TeamView: React.FC = () => {
       >
         {createdInviteUrl ? (
           <div className="space-y-4 text-center">
-            <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm border border-emerald-100">
-              <Mail className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="font-bold text-gray-900 text-base">Real-Time Mail Dispatched!</h3>
-              <p className="text-xs text-gray-500 mt-1">
-                An invitation email notification has been dispatched to <strong>{email}</strong> for <strong>{firstName} {lastName}</strong>.
-              </p>
-            </div>
+            {emailDelivered ? (
+              <>
+                <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm border border-emerald-100">
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-base">Invitation Email Sent!</h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    An email notification was delivered to <strong>{email}</strong> for <strong>{firstName} {lastName}</strong>.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto shadow-sm border border-amber-100">
+                  <Share2 className="w-6 h-6 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-base">Invite Link Ready!</h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Direct invitation link generated for <strong>{firstName} {lastName}</strong>. Send it directly via WhatsApp or email below!
+                  </p>
+                </div>
+              </>
+            )}
 
-            <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-card text-left space-y-1">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-900">
-                <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0" />
-                <span>Direct Accept Link</span>
+            <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-card text-left space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-indigo-900">
+                <span className="flex items-center gap-1.5">
+                  <Link className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                  <span>Direct Activation Link</span>
+                </span>
+                <span className="text-[10px] text-gray-400 font-normal">Valid for account setup</span>
               </div>
               <div className="p-2 bg-white border border-indigo-200 rounded-btn text-[11px] font-mono text-gray-700 break-all select-all flex items-center gap-2">
-                <Link className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                <span className="flex-1 text-left">{createdInviteUrl}</span>
+                <span className="flex-1 text-left select-all">{createdInviteUrl}</span>
               </div>
+            </div>
+
+            {/* Quick Share Buttons */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <a
+                href={`https://api.whatsapp.com/send?phone=${phone.replace(/\D/g, '')}&text=${encodeURIComponent(
+                  `Hello ${firstName}! You have been invited to join Shift Scheduler. Please click this link to set your password and activate your account:\n${createdInviteUrl}`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-all no-underline"
+              >
+                <span>💬 WhatsApp Invite</span>
+              </a>
+              <a
+                href={`mailto:${email}?subject=${encodeURIComponent("Invitation to join Shift Scheduler")}&body=${encodeURIComponent(
+                  `Hello ${firstName},\n\nYou have been invited to join the team on Shift Scheduler.\n\nPlease click the activation link below to set your password and access your shifts:\n${createdInviteUrl}\n\nWelcome aboard!`
+                )}`}
+                className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-all no-underline"
+              >
+                <span>✉️ Send via Gmail</span>
+              </a>
             </div>
           </div>
         ) : (
