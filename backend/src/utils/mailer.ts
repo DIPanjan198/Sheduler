@@ -118,37 +118,49 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // 3. GMAIL SMTP (works locally, may be blocked on cloud hosts)
+  // 3. GMAIL SMTP - tries port 587 (STARTTLS) first, then 465 (SSL)
+  //    NOTE: On Render and most cloud hosts, ALL SMTP ports are blocked.
+  //    If this fails, set RESEND_API_KEY in Render env vars.
   // ─────────────────────────────────────────────────────────────────
   const gmailUser = (process.env.GMAIL_USER || process.env.SMTP_USER || '').trim().replace(/^["']|["']$/g, '');
   const gmailPass = (process.env.GMAIL_PASS || process.env.SMTP_PASS || '').trim().replace(/^["']|["']$/g, '').replace(/\s+/g, '');
   const smtpHost = (process.env.SMTP_HOST || '').trim().replace(/^["']|["']$/g, '');
 
   if ((gmailUser && gmailPass) || smtpHost) {
-    try {
-      const transporter = nodemailer.createTransport({
-        host: smtpHost || 'smtp.gmail.com',
-        port: smtpHost ? parseInt(process.env.SMTP_PORT || '587', 10) : 465,
-        secure: smtpHost ? (process.env.SMTP_SECURE === 'true') : true,
-        connectionTimeout: 8000,
-        greetingTimeout: 8000,
-        socketTimeout: 10000,
-        auth: (gmailUser && gmailPass) ? { user: gmailUser, pass: gmailPass } : undefined,
-        tls: { rejectUnauthorized: false }
-      });
+    const host = smtpHost || 'smtp.gmail.com';
+    const portsToTry = smtpHost
+      ? [parseInt(process.env.SMTP_PORT || '587', 10)]
+      : [587, 465]; // Try 587 (STARTTLS) first - more cloud-friendly
 
-      const info = await transporter.sendMail({
-        from: `"${senderName}" <${gmailUser || senderEmail}>`,
-        to,
-        subject,
-        html
-      });
+    for (const port of portsToTry) {
+      try {
+        const secure = port === 465;
+        const transporter = nodemailer.createTransport({
+          host,
+          port,
+          secure,
+          requireTLS: !secure,
+          connectionTimeout: 8000,
+          greetingTimeout: 8000,
+          socketTimeout: 10000,
+          auth: (gmailUser && gmailPass) ? { user: gmailUser, pass: gmailPass } : undefined,
+          tls: { rejectUnauthorized: false }
+        });
 
-      console.log(`[Gmail SMTP] Email delivered to ${to} (ID: ${info.messageId})`);
-      return true;
-    } catch (err: any) {
-      console.error(`[Gmail SMTP Error] Failed for ${to}:`, err.message || err);
+        const info = await transporter.sendMail({
+          from: `"${senderName}" <${gmailUser || senderEmail}>`,
+          to,
+          subject,
+          html
+        });
+
+        console.log(`[Gmail SMTP port ${port}] Email delivered to ${to} (ID: ${info.messageId})`);
+        return true;
+      } catch (err: any) {
+        console.warn(`[Gmail SMTP port ${port}] Failed for ${to}:`, err.message || err);
+      }
     }
+    console.error(`[Gmail SMTP] All ports failed - SMTP is likely blocked by your cloud host. Add RESEND_API_KEY to your Render environment variables.`);
   }
 
   // ─────────────────────────────────────────────────────────────────
