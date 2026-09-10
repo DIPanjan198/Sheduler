@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import https from 'https';
+import * as https from 'https';
 
 /**
  * Real-time Email Delivery Utility
@@ -17,7 +17,8 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
   // 1. RESEND API (HTTPS port 443 — works on all cloud platforms)
   // ─────────────────────────────────────────────────────────────────
   const resendApiKey = (process.env.RESEND_API_KEY || '').trim().replace(/^["']|["']$/g, '');
-  if (resendApiKey && resendApiKey.startsWith('re_')) {
+  // Accept valid Resend keys and skip placeholder values
+  if (resendApiKey && !resendApiKey.includes('REPLACE_WITH') && (resendApiKey.startsWith('re_') || resendApiKey.startsWith('rnd_') || resendApiKey.length > 15)) {
     try {
       // IMPORTANT: 'onboarding@resend.dev' only works when sending to the
       // Resend account owner's own email — it will silently fail for all other

@@ -1,5 +1,5 @@
-import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
+import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 import { prisma } from './db.service';
 import { generateAccessToken, generateRefreshToken } from '../utils/jwt';
 import { TokenPayload } from '../types';
@@ -131,11 +131,15 @@ export class AuthService {
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
 
+    const businessObj = (user as any).business;
+    const businessName = businessObj?.name || 'Business';
+    const timezone = businessObj?.timezone || 'America/New_York';
+
     return {
       business: {
-        id: user.business.id,
-        name: user.business.name,
-        timezone: user.business.timezone
+        id: businessObj?.id || user.businessId,
+        name: businessName,
+        timezone: timezone
       },
       user: {
         id: user.id,
@@ -145,8 +149,8 @@ export class AuthService {
         phone: user.phone,
         role: user.role,
         businessId: user.businessId,
-        businessName: user.business.name,
-        timezone: user.business.timezone
+        businessName: businessName,
+        timezone: timezone
       },
       tokens: { accessToken, refreshToken }
     };
@@ -212,10 +216,10 @@ export class AuthService {
       user = await prisma.user.create({
         data: {
           businessId,
-          firstName: data.firstName,
-          lastName: data.lastName,
+          firstName: data.firstName || '',
+          lastName: data.lastName || '',
           email: cleanEmail,
-          phone: data.phone,
+          phone: data.phone || '',
           passwordHash: dummyHash,
           role: data.role || 'EMPLOYEE',
           status: 'INVITED',
@@ -336,7 +340,16 @@ export class AuthService {
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
 
+    const businessObj = (user as any).business;
+    const businessName = businessObj?.name || 'Business';
+    const timezone = businessObj?.timezone || 'America/New_York';
+
     return {
+      business: {
+        id: businessObj?.id || user.businessId,
+        name: businessName,
+        timezone: timezone
+      },
       user: {
         id: updatedUser.id,
         firstName: updatedUser.firstName,
@@ -344,8 +357,8 @@ export class AuthService {
         email: updatedUser.email,
         role: updatedUser.role,
         businessId: user.businessId,
-        businessName: user.business.name,
-        timezone: user.business.timezone
+        businessName: businessName,
+        timezone: timezone
       },
       tokens: { accessToken, refreshToken }
     };
