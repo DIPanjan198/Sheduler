@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { User } from '../../types';
 import { api } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -25,10 +25,14 @@ export const TeamView: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Track IDs currently being deleted so polling doesn't re-add them mid-flight
+  const deletingIds = useRef<Set<string>>(new Set());
+
   const loadTeam = useCallback(async () => {
     try {
       const data = await api.request<User[]>('/users');
-      setUsers(data || []);
+      // Filter out any users whose delete is still in-flight
+      setUsers((data || []).filter(u => !deletingIds.current.has(u.id)));
     } catch (e) {}
   }, []);
 
@@ -115,17 +119,23 @@ export const TeamView: React.FC = () => {
   const handleRemove = async (id: string, name: string) => {
     if (!window.confirm(`Are you sure you want to PERMANENTLY REMOVE ${name} from your business team? This action cannot be undone.`)) return;
     
-    // Instant optimistic removal from UI — no waiting
+    // Mark as deleting BEFORE optimistic removal so polling doesn't re-add it
+    deletingIds.current.add(id);
     const previousUsers = [...users];
     setUsers(prev => prev.filter(u => u.id !== id));
 
     try {
       await api.request(`/users/${id}?permanent=true`, { method: 'DELETE' });
       showToast(`Employee ${name} removed permanently from team`);
+      // Sync with server to confirm deletion
+      await loadTeam();
     } catch (err: any) {
       // Rollback on failure
       setUsers(previousUsers);
       showToast(err.message || 'Failed to remove employee', 'error');
+    } finally {
+      // Always clear the deleting flag
+      deletingIds.current.delete(id);
     }
   };
 
