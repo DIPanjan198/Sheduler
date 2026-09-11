@@ -17,9 +17,23 @@ export class AuthService {
     password: string;
   }) {
     const cleanEmail = data.email ? data.email.trim().toLowerCase() : '';
-    const existingUser = await prisma.user.findUnique({ where: { email: cleanEmail } });
+    if (!cleanEmail) {
+      throw { status: 400, code: 'EMAIL_REQUIRED', message: 'Valid email address is required' };
+    }
+    if (!data.businessName?.trim()) {
+      throw { status: 400, code: 'BUSINESS_NAME_REQUIRED', message: 'Business name is required' };
+    }
+    if (!data.password || data.password.length < 6) {
+      throw { status: 400, code: 'INVALID_PASSWORD', message: 'Password must be at least 6 characters long' };
+    }
+
+    let existingUser = await prisma.user.findUnique({ where: { email: cleanEmail } });
+    if (!existingUser) {
+      const candidates = await prisma.user.findMany({ select: { id: true, email: true } });
+      existingUser = candidates.find(u => u.email.toLowerCase() === cleanEmail) as any;
+    }
     if (existingUser) {
-      throw { status: 400, code: 'EMAIL_EXISTS', message: 'User with this email already exists' };
+      throw { status: 400, code: 'EMAIL_EXISTS', message: 'A user account with this email address already exists. Please sign in instead.' };
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -27,15 +41,15 @@ export class AuthService {
 
     const business = await prisma.business.create({
       data: {
-        name: data.businessName,
+        name: data.businessName.trim(),
         timezone: data.timezone || 'America/New_York',
         address: data.address,
         users: {
           create: {
-            firstName: data.firstName,
-            lastName: data.lastName,
+            firstName: data.firstName?.trim() || '',
+            lastName: data.lastName?.trim() || '',
             email: cleanEmail,
-            phone: data.phone,
+            phone: data.phone || '',
             passwordHash,
             role: 'MANAGER',
             status: 'ACTIVE'
@@ -45,7 +59,14 @@ export class AuthService {
       include: { users: true }
     });
 
-    const manager = business.users[0];
+    let manager = business.users?.[0];
+    if (!manager) {
+      manager = await prisma.user.findFirst({ where: { businessId: business.id } }) as any;
+    }
+    if (!manager) {
+      throw { status: 500, code: 'REGISTRATION_ERROR', message: 'Business created but manager account could not be initialized' };
+    }
+
     const payload: TokenPayload = {
       userId: manager.id,
       businessId: business.id,
@@ -80,6 +101,10 @@ export class AuthService {
     const cleanEmail = email ? email.trim().toLowerCase() : '';
     const rawEmail = email ? email.trim() : '';
 
+    if (!cleanEmail || !password) {
+      throw { status: 400, code: 'INVALID_CREDENTIALS', message: 'Email and password are required' };
+    }
+
     let user = await prisma.user.findUnique({
       where: { email: cleanEmail },
       include: { business: true }
@@ -113,6 +138,11 @@ export class AuthService {
     if (user.status === 'DISABLED') {
       console.warn(`[Auth] User account "${cleanEmail}" is disabled`);
       throw { status: 401, code: 'ACCOUNT_DISABLED', message: 'This account has been disabled by your administrator' };
+    }
+
+    if (user.status === 'INVITED') {
+      console.warn(`[Auth] User account "${cleanEmail}" has not accepted invite`);
+      throw { status: 401, code: 'ACCOUNT_INVITED', message: 'This account has been invited but not activated yet. Please check your email and click the invitation link to set your password.' };
     }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);

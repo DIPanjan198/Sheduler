@@ -11,6 +11,9 @@ export class AuthController {
       const result = await AuthService.registerBusiness(req.body);
       return res.status(201).json(result);
     } catch (err: any) {
+      if (err?.code === 'P2002' || err?.message?.includes('Unique constraint')) {
+        return res.status(400).json({ error: { code: 'EMAIL_EXISTS', message: 'A user account with this email address already exists. Please sign in instead.' } });
+      }
       const status = err.status || 500;
       return res.status(status).json({ error: { code: err.code || 'REGISTER_FAILED', message: err.message || 'Registration failed' } });
     }

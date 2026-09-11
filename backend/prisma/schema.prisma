@@ -13,6 +13,7 @@ model Business {
   timezone                String             @default("America/New_York")
   address                 String?
   reminderLeadTimeMinutes Int                @default(120)
+  inviteTokenExpiresAt    DateTime?
   createdAt               DateTime           @default(now())
   updatedAt               DateTime           @updatedAt
   users                   User[]

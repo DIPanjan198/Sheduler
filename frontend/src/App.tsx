@@ -55,7 +55,7 @@ const MainContent: React.FC = () => {
   }, [user?.role, user?.id]);
 
   // Direct route check for accept invitation link
-  if (window.location.pathname.startsWith('/accept-invite')) {
+  if (window.location.pathname.startsWith('/accept-invite') || window.location.hash.includes('accept-invite')) {
     return <AcceptInvitePage />;
   }
 

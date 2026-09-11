@@ -1,6 +1,6 @@
 import { User, Shift, TimeOffRequest, ShiftSwapRequest, TimeClockEntry, NotificationItem } from '../types';
 
-const API_BASE = '/api/v1';
+const API_BASE = (import.meta as any).env?.VITE_API_URL || '/api/v1';
 
 class ApiClient {
   private getHeaders(): HeadersInit {
@@ -14,7 +14,14 @@ class ApiClient {
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const headers = { ...this.getHeaders(), ...(options.headers || {}) };
     
-    const response = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+    } catch (networkErr: any) {
+      console.error('[API Network Error]', networkErr);
+      throw new Error('Unable to connect to the server. Please verify your connection or ensure the server is running.');
+    }
+
     const text = await response.text();
     
     let data: any = {};
@@ -31,13 +38,27 @@ class ApiClient {
     }
 
     if (!response.ok) {
+      const errorCode = data?.error?.code;
+      const errorMessage = data?.error?.message;
+
       if (response.status === 401) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('currentUser');
-        const isAuthEndpoint = endpoint.startsWith('/auth/login') || endpoint.startsWith('/auth/register');
-        throw new Error(data?.error?.message || (isAuthEndpoint ? 'Invalid email or password' : 'Your session expired. Please Sign In again.'));
+        const isAuthEndpoint = endpoint.startsWith('/auth/login') || endpoint.startsWith('/auth/register') || endpoint.startsWith('/auth/accept-invite');
+        
+        if (!isAuthEndpoint) {
+          // Force logout for expired/deleted/disabled accounts
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('currentUser');
+          const reason = errorCode === 'ACCOUNT_DELETED'
+            ? 'Your account has been removed. Please contact your manager.'
+            : errorCode === 'ACCOUNT_DISABLED'
+            ? 'Your account has been disabled. Please contact your manager.'
+            : 'Your session expired. Please Sign In again.';
+          window.dispatchEvent(new CustomEvent('shift-scheduler:force-logout', { detail: { reason } }));
+          throw new Error(reason);
+        }
+        throw new Error(errorMessage || 'Invalid email or password');
       }
-      throw new Error(data?.error?.message || data?.message || `HTTP Error ${response.status}`);
+      throw new Error(errorMessage || data?.message || `HTTP Error ${response.status}`);
     }
 
     // Automatically trigger global real-time UI data re-sync on any mutation action

@@ -91,7 +91,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister }) => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4.5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
               <Mail className="w-3.5 h-3.5 text-indigo-500" />
@@ -100,6 +100,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister }) => {
             <input
               type="email"
               required
+              autoComplete="email"
+              placeholder={portalMode === 'manager' ? 'manager@company.com' : 'employee@company.com'}
               value={email}
               onChange={e => setEmail(e.target.value)}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all bg-gray-50/50 focus:bg-white"
@@ -115,6 +117,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister }) => {
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
+                autoComplete="current-password"
+                placeholder="••••••••"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 className="w-full px-4 py-3 pr-11 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all bg-gray-50/50 focus:bg-white"
@@ -151,14 +155,28 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister }) => {
               </p>
             </div>
           ) : (
-            <div className="flex items-start gap-2.5 bg-amber-50/80 border border-amber-200/70 rounded-xl px-3.5 py-3">
-              <Users className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-              <div className="space-y-1">
-                <p className="text-xs font-bold text-amber-900">
-                  Employee Self-Registration is Disabled
-                </p>
-                <p className="text-[11px] text-amber-700 leading-relaxed font-medium">
-                  Employees cannot self-register. Your manager must send you an invitation link to your email to activate and set your password.
+            <div className="space-y-2.5">
+              <div className="flex items-start gap-2.5 bg-amber-50/80 border border-amber-200/70 rounded-xl px-3.5 py-3">
+                <Users className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-amber-900">
+                    Employee Account Activation
+                  </p>
+                  <p className="text-[11px] text-amber-700 leading-relaxed font-medium">
+                    Employees are added by their manager. Please check your email for your invitation link to activate your account.
+                  </p>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-gray-600 font-medium">
+                  Are you an employer or manager?{' '}
+                  <button
+                    type="button"
+                    onClick={onNavigateRegister}
+                    className="font-extrabold text-indigo-600 hover:text-indigo-700 hover:underline transition-colors"
+                  >
+                    Register Business
+                  </button>
                 </p>
               </div>
             </div>

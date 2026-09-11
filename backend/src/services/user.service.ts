@@ -40,11 +40,16 @@ export class UserService {
       status: user.status,
       hourlyRate: user.hourlyRate,
       notificationPrefs: JSON.parse(user.notificationPrefs || '{"smsEnabled":true,"emailEnabled":true}'),
-      business: {
+      business: user.business ? {
         id: user.business.id,
         name: user.business.name,
         timezone: user.business.timezone,
         reminderLeadTimeMinutes: user.business.reminderLeadTimeMinutes
+      } : {
+        id: user.businessId,
+        name: 'Business',
+        timezone: 'America/New_York',
+        reminderLeadTimeMinutes: 120
       }
     };
   }

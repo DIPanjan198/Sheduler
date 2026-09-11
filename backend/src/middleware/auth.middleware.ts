@@ -1,8 +1,9 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest, Role } from '../types';
 import { verifyAccessToken } from '../utils/jwt';
+import { prisma } from '../services/db.service';
 
-export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunction) => {
+export const authenticateJWT = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication token missing or invalid' } });
@@ -11,6 +12,21 @@ export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunct
   const token = authHeader.split(' ')[1];
   try {
     const payload = verifyAccessToken(token);
+
+    // Verify the user still exists in the database (catches deleted employees)
+    const userExists = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { id: true, status: true }
+    });
+
+    if (!userExists) {
+      return res.status(401).json({ error: { code: 'ACCOUNT_DELETED', message: 'Your account no longer exists. Please contact your manager.' } });
+    }
+
+    if (userExists.status === 'DISABLED') {
+      return res.status(401).json({ error: { code: 'ACCOUNT_DISABLED', message: 'Your account has been disabled. Please contact your manager.' } });
+    }
+
     req.user = payload;
     next();
   } catch (err) {

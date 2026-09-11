@@ -20,9 +20,12 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin }) =
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [countryCode, setCountryCode] = useState('+91');
+  const [phoneDigits, setPhoneDigits] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -45,10 +48,27 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin }) =
     e.preventDefault();
     setErrorMsg('');
 
-    if (!businessName.trim() || !timezone.trim() || !firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim() || !password.trim()) {
+    if (!businessName.trim() || !timezone.trim() || !firstName.trim() || !lastName.trim() || !email.trim() || !phoneDigits.trim() || !password.trim()) {
       setErrorMsg('All fields are required. Please fill in all details.');
       return;
     }
+
+    if (phoneDigits.trim().length < 7) {
+      setErrorMsg('Please enter a valid mobile number (at least 7 digits).');
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMsg('Password must be at least 6 characters long.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMsg('Passwords do not match. Please verify both passwords.');
+      return;
+    }
+
+    const fullPhone = `${countryCode}${phoneDigits.trim()}`;
 
     setIsLoading(true);
     try {
@@ -57,8 +77,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin }) =
         timezone: timezone.trim(),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
+        email: email.trim().toLowerCase(),
+        phone: fullPhone,
         password
       });
     } catch (err: any) {
@@ -130,12 +150,17 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin }) =
                   onChange={e => setTimezone(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all bg-gray-50/50 focus:bg-white"
                 >
+                  <option value="Asia/Kolkata">Asia/Kolkata (IST +5:30)</option>
                   <option value="America/New_York">America/New_York (Eastern)</option>
                   <option value="America/Chicago">America/Chicago (Central)</option>
                   <option value="America/Denver">America/Denver (Mountain)</option>
                   <option value="America/Los_Angeles">America/Los_Angeles (Pacific)</option>
                   <option value="Europe/London">Europe/London (GMT/BST)</option>
-                  <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+                  <option value="Europe/Berlin">Europe/Berlin (CET/CEST)</option>
+                  <option value="Asia/Dubai">Asia/Dubai (GST +4:00)</option>
+                  <option value="Asia/Singapore">Asia/Singapore (SGT +8:00)</option>
+                  <option value="Asia/Tokyo">Asia/Tokyo (JST +9:00)</option>
+                  <option value="Australia/Sydney">Australia/Sydney (AEST)</option>
                 </select>
               </div>
 
@@ -154,13 +179,29 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin }) =
                   <label className="block text-xs font-bold text-gray-700 mb-1">
                     First Name <span className="text-rose-500">*</span>
                   </label>
-                  <input type="text" required value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full px-3.5 py-2.5 border rounded-xl text-sm bg-gray-50/50 focus:bg-white" />
+                  <input
+                    type="text"
+                    required
+                    autoComplete="given-name"
+                    placeholder="John"
+                    value={firstName}
+                    onChange={e => setFirstName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 border rounded-xl text-sm bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500 border-gray-200 transition-all"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
                     Last Name <span className="text-rose-500">*</span>
                   </label>
-                  <input type="text" required value={lastName} onChange={e => setLastName(e.target.value)} className="w-full px-3.5 py-2.5 border rounded-xl text-sm bg-gray-50/50 focus:bg-white" />
+                  <input
+                    type="text"
+                    required
+                    autoComplete="family-name"
+                    placeholder="Doe"
+                    value={lastName}
+                    onChange={e => setLastName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 border rounded-xl text-sm bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500 border-gray-200 transition-all"
+                  />
                 </div>
               </div>
 
@@ -168,7 +209,15 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin }) =
                 <label className="block text-xs font-bold text-gray-700 mb-1">
                   Email Address <span className="text-rose-500">*</span>
                 </label>
-                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full px-3.5 py-2.5 border rounded-xl text-sm bg-gray-50/50 focus:bg-white" />
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  placeholder="manager@company.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border rounded-xl text-sm bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500 border-gray-200 transition-all"
+                />
               </div>
 
               <div>
@@ -176,37 +225,48 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin }) =
                   Mobile Number <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative flex rounded-xl border border-gray-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 bg-gray-50/50 focus-within:bg-white overflow-hidden transition-all">
-                  <div className="flex items-center gap-1.5 px-3 bg-slate-100/70 border-r border-gray-200 select-none text-xs font-bold text-slate-700">
-                    <span className="text-base leading-none">🇮🇳</span>
-                    <span>+91</span>
-                  </div>
+                  <select
+                    value={countryCode}
+                    onChange={e => setCountryCode(e.target.value)}
+                    className="px-2.5 py-2.5 bg-slate-100/80 border-r border-gray-200 select-none text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+                  >
+                    <option value="+91">🇮🇳 +91</option>
+                    <option value="+1">🇺🇸 +1</option>
+                    <option value="+44">🇬🇧 +44</option>
+                    <option value="+61">🇦🇺 +61</option>
+                    <option value="+971">🇦🇪 +971</option>
+                    <option value="+65">🇸🇬 +65</option>
+                    <option value="+49">🇩🇪 +49</option>
+                    <option value="+33">🇫🇷 +33</option>
+                    <option value="+81">🇯🇵 +81</option>
+                  </select>
                   <input
                     type="tel"
                     required
-                    maxLength={10}
-                    pattern="[6-9][0-9]{9}"
-                    value={phone.startsWith('+91') ? phone.slice(3) : phone}
-                    onChange={e => {
-                      const digitsOnly = e.target.value.replace(/\D/g, '');
-                      setPhone(digitsOnly ? `+91${digitsOnly}` : '');
-                    }}
+                    autoComplete="tel"
+                    maxLength={15}
+                    value={phoneDigits}
+                    onChange={e => setPhoneDigits(e.target.value.replace(/\D/g, '').slice(0, 15))}
                     className="flex-1 px-3.5 py-2.5 text-sm text-slate-900 bg-transparent focus:outline-none tracking-wider font-medium"
-                    placeholder="98765 43210"
+                    placeholder={countryCode === '+1' ? '212 555 0199' : countryCode === '+91' ? '98765 43210' : '12345 67890'}
                   />
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Password <span className="text-rose-500">*</span>
+                  Password (min 6 characters) <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
+                    minLength={6}
+                    autoComplete="new-password"
+                    placeholder="••••••••"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
-                    className="w-full px-3.5 py-2.5 pr-10 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 bg-gray-50/50 focus:bg-white"
+                    className="w-full px-3.5 py-2.5 pr-10 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 bg-gray-50/50 focus:bg-white transition-all"
                   />
                   <button
                     type="button"
@@ -215,6 +275,32 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin }) =
                     title={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Confirm Password <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    className="w-full px-3.5 py-2.5 pr-10 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 bg-gray-50/50 focus:bg-white transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 p-1 rounded-md transition-colors"
+                    title={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
@@ -234,7 +320,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin }) =
         <div className="text-center pt-2 border-t border-gray-100">
           <p className="text-xs text-gray-500 font-medium">
             Already registered?{' '}
-            <button onClick={onNavigateLogin} className="font-extrabold text-indigo-600 hover:text-indigo-700 underline ml-1">
+            <button type="button" onClick={onNavigateLogin} className="font-extrabold text-indigo-600 hover:text-indigo-700 underline ml-1">
               Sign In
             </button>
           </p>

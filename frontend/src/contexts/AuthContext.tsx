@@ -51,43 +51,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
   }, []);
 
+  // Listen for force-logout events dispatched by the API client when the server
+  // rejects a request because the employee's account was deleted or disabled.
+  useEffect(() => {
+    const handleForceLogout = (e: Event) => {
+      const reason = (e as CustomEvent<{ reason: string }>).detail?.reason || 'Your session has ended.';
+      setUser(null);
+      setBusiness(null);
+      showToast(reason, 'error');
+    };
+
+    window.addEventListener('shift-scheduler:force-logout', handleForceLogout);
+    return () => window.removeEventListener('shift-scheduler:force-logout', handleForceLogout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const login = async (email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      const res = await api.request<any>('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password })
-      });
-      setUser(res.user);
-      setBusiness(res.business || {
-        id: res.user.businessId,
-        name: res.user.businessName || 'Business',
-        timezone: res.user.timezone || 'Asia/Kolkata',
-        reminderLeadTimeMinutes: 120
-      });
-      localStorage.setItem('accessToken', res.tokens?.accessToken);
-      localStorage.setItem('currentUser', JSON.stringify(res.user));
-      showToast(`Welcome back, ${res.user.firstName}!`);
-    } finally {
-      setIsLoading(false);
-    }
+    const res = await api.request<any>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    setUser(res.user);
+    setBusiness(res.business || {
+      id: res.user.businessId,
+      name: res.user.businessName || 'Business',
+      timezone: res.user.timezone || 'Asia/Kolkata',
+      reminderLeadTimeMinutes: 120
+    });
+    localStorage.setItem('accessToken', res.tokens?.accessToken);
+    localStorage.setItem('currentUser', JSON.stringify(res.user));
+    showToast(`Welcome back, ${res.user.firstName}!`);
   };
 
   const register = async (data: any) => {
-    setIsLoading(true);
-    try {
-      const res = await api.request<any>('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify(data)
-      });
-      setUser(res.user);
-      setBusiness(res.business);
-      localStorage.setItem('accessToken', res.tokens?.accessToken);
-      localStorage.setItem('currentUser', JSON.stringify(res.user));
-      showToast('Business registered successfully!');
-    } finally {
-      setIsLoading(false);
-    }
+    const res = await api.request<any>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    setUser(res.user);
+    setBusiness(res.business || {
+      id: res.user?.businessId,
+      name: res.user?.businessName || data.businessName || 'Business',
+      timezone: res.user?.timezone || data.timezone || 'Asia/Kolkata',
+      reminderLeadTimeMinutes: 120
+    });
+    localStorage.setItem('accessToken', res.tokens?.accessToken);
+    localStorage.setItem('currentUser', JSON.stringify(res.user));
+    showToast('Business registered successfully!');
   };
 
   const logout = () => {
