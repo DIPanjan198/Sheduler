@@ -5,6 +5,7 @@ import { Sidebar } from './components/navigation/Sidebar';
 import { MobileTabBar } from './components/navigation/MobileTabBar';
 import { Toast } from './components/ui/Toast';
 import { AnimatedBackground } from './components/ui/AnimatedBackground';
+import { SplashScreen } from './components/ui/SplashScreen';
 
 import { ManagerCalendar } from './components/calendar/ManagerCalendar';
 import { EmployeeSchedule } from './components/calendar/EmployeeSchedule';
@@ -18,11 +19,13 @@ import { NoticeBoardView } from './components/notice/NoticeBoardView';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { AcceptInvitePage } from './pages/AcceptInvitePage';
-import { Logo } from './components/ui/Logo';
 
 const MainContent: React.FC = () => {
   const { user, toast, clearToast, isLoading } = useAuth();
   const [authView, setAuthView] = useState<'login' | 'register'>('login');
+
+  // ── Splash screen: show once on cold-start, independent of auth ──────────
+  const [showSplash, setShowSplash] = useState(true);
 
   const isManager = user?.role === 'MANAGER';
 
@@ -59,23 +62,32 @@ const MainContent: React.FC = () => {
     return <AcceptInvitePage />;
   }
 
+  // Render splash overtop everything (fixed overlay, auto-dismisses)
+  const splash = showSplash ? (
+    <SplashScreen onComplete={() => setShowSplash(false)} />
+  ) : null;
+
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-        <AnimatedBackground />
-        <div className="text-center space-y-4 relative z-10">
-          <Logo size="xl" className="animate-bounce mx-auto" />
-          <p className="text-xs text-slate-500 font-semibold tracking-widest uppercase">Loading Shift Scheduler...</p>
+      <>
+        {splash}
+        <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+          <AnimatedBackground />
+          <div className="text-center space-y-3 relative z-10">
+            {/* Spinning ring loader */}
+            <div className="mx-auto w-12 h-12 rounded-full border-4 border-indigo-100 border-t-indigo-500 animate-spin" />
+            <p className="text-xs text-slate-400 font-semibold tracking-widest uppercase">Loading...</p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   if (!user) {
     if (authView === 'register') {
-      return <RegisterPage onNavigateLogin={() => setAuthView('login')} />;
+      return <>{splash}<RegisterPage onNavigateLogin={() => setAuthView('login')} /></>;
     }
-    return <LoginPage onNavigateRegister={() => setAuthView('register')} />;
+    return <>{splash}<LoginPage onNavigateRegister={() => setAuthView('register')} /></>;
   }
 
   const renderTabContent = () => {
@@ -102,7 +114,9 @@ const MainContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden">
+    <>
+      {splash}
+      <div className="min-h-screen flex flex-col relative overflow-hidden">
 
       {/* ✨ Animated Background - persists behind all content */}
       <AnimatedBackground />
@@ -128,6 +142,7 @@ const MainContent: React.FC = () => {
       <MobileTabBar activeTab={activeTab} setActiveTab={handleSelectTab} />
 
     </div>
+    </>
   );
 };
 
