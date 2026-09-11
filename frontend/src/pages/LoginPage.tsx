@@ -155,28 +155,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister }) => {
               </p>
             </div>
           ) : (
-            <div className="space-y-2.5">
-              <div className="flex items-start gap-2.5 bg-amber-50/80 border border-amber-200/70 rounded-xl px-3.5 py-3">
-                <Users className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                <div className="space-y-1">
-                  <p className="text-xs font-bold text-amber-900">
-                    Employee Account Activation
-                  </p>
-                  <p className="text-[11px] text-amber-700 leading-relaxed font-medium">
-                    Employees are added by their manager. Please check your email for your invitation link to activate your account.
-                  </p>
-                </div>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-gray-600 font-medium">
-                  Are you an employer or manager?{' '}
-                  <button
-                    type="button"
-                    onClick={onNavigateRegister}
-                    className="font-extrabold text-indigo-600 hover:text-indigo-700 hover:underline transition-colors"
-                  >
-                    Register Business
-                  </button>
+            <div className="flex items-start gap-2.5 bg-amber-50/80 border border-amber-200/70 rounded-xl px-3.5 py-3">
+              <Users className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-amber-900">
+                  Employee Account Activation
+                </p>
+                <p className="text-[11px] text-amber-700 leading-relaxed font-medium">
+                  Employees are added by their manager. Please check your email for your invitation link to activate your account and set your password.
                 </p>
               </div>
             </div>
