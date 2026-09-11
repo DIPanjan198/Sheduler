@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
-import { Lock, Mail, Eye, EyeOff, ArrowRight, Users, Building, KeyRound, CheckCircle2, X, RefreshCw } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, ArrowRight, ArrowLeft, Users, Building, KeyRound, CheckCircle2, X, RefreshCw } from 'lucide-react';
 import { Logo } from '../components/ui/Logo';
 import { api } from '../services/api';
 
 interface LoginPageProps {
   onNavigateRegister: () => void;
+  onNavigateHome?: () => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister, onNavigateHome }) => {
   const { login } = useAuth();
   const [portalMode, setPortalMode] = useState<'manager' | 'employee'>('manager');
   const [email, setEmail] = useState('');
@@ -167,6 +168,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister }) => {
       <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-purple-500/15 rounded-full blur-3xl pointer-events-none animate-orb-2" />
       <div className="absolute -bottom-16 left-1/3 w-64 h-64 bg-cyan-400/10 rounded-full blur-3xl pointer-events-none animate-orb-3" />
 
+      {/* Back to Home Button */}
+      {onNavigateHome && (
+        <button
+          type="button"
+          onClick={onNavigateHome}
+          className="absolute top-5 left-5 z-20 inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-slate-700 hover:text-indigo-600 bg-white/90 hover:bg-white backdrop-blur-md rounded-xl border border-slate-200/80 shadow-xs hover:shadow-sm transition-all cursor-pointer group"
+        >
+          <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:-translate-x-0.5 transition-transform" />
+          <span>Back to Home</span>
+        </button>
+      )}
+
       {/* Main Glass Card */}
       <div className="w-full max-w-md bg-white/95 backdrop-blur-xl p-6 sm:p-9 rounded-2xl border border-gray-200/80 shadow-lifted space-y-6 relative z-10">
 
@@ -174,8 +187,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister }) => {
         <div className="text-center space-y-3">
           <Logo size="xl" className="mx-auto" />
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Shift Scheduler</h1>
-            <p className="text-xs text-gray-500 mt-1 font-medium">Enterprise Staff Scheduling & Time Clock</p>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">StaffGrid</h1>
+            <p className="text-xs text-gray-500 mt-1 font-medium">Enterprise Workforce Scheduling & Time Clock</p>
           </div>
         </div>
 

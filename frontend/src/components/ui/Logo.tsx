@@ -47,7 +47,7 @@ export const Logo: React.FC<LogoProps> = ({
   ) : (
     <img
       src="/logo.jpg"
-      alt="ShiftSync Logo"
+      alt="StaffGrid Logo"
       className="w-full h-full object-cover rounded-inherit"
       style={{ borderRadius: 'inherit' }}
       onError={() => setImgError(true)}
@@ -81,7 +81,7 @@ export const Logo: React.FC<LogoProps> = ({
             bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600
             bg-clip-text text-transparent ${text}`}
         >
-          ShiftSync
+          StaffGrid
         </span>
         {size === 'lg' || size === 'xl' ? (
           <span className="text-[10px] font-semibold tracking-widest text-slate-400 uppercase block mt-0.5">

@@ -60,7 +60,7 @@ export const Navbar: React.FC<NavbarProps> = ({ setActiveTab }) => {
           >
             <Logo size="md" className="transition-all duration-200 group-hover:scale-105 active-press" />
             <div className="hidden sm:block text-left">
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-600">Shift Scheduler</span>
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-600">StaffGrid</span>
               <h2 className="text-sm font-bold text-slate-800 leading-tight truncate -mt-0.5">
                 {business?.name || 'Workspace'}
               </h2>

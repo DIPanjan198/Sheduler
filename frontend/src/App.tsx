@@ -18,11 +18,60 @@ import { NoticeBoardView } from './components/notice/NoticeBoardView';
 
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { LandingPage } from './pages/LandingPage';
 import { AcceptInvitePage } from './pages/AcceptInvitePage';
 
 const MainContent: React.FC = () => {
   const { user, toast, clearToast, isLoading } = useAuth();
-  const [authView, setAuthView] = useState<'login' | 'register'>('login');
+  const [authView, setAuthView] = useState<'landing' | 'login' | 'register'>(() => {
+    const hash = window.location.hash.toLowerCase();
+    if (hash === '#login') return 'login';
+    if (hash === '#register') return 'register';
+    return 'landing';
+  });
+
+  // Sync hash with authView for bookmarking & browser back/forward buttons
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (hash === '#login') {
+        setAuthView('login');
+      } else if (hash === '#register') {
+        setAuthView('register');
+      } else if (
+        hash === '#landing' || 
+        hash === '' || 
+        hash === '#about' || 
+        hash === '#features' || 
+        hash === '#how-it-works' || 
+        hash === '#testimonials' || 
+        hash === '#faq'
+      ) {
+        if (!user) {
+          setAuthView('landing');
+        }
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [user]);
+
+  const handleNavigateLogin = () => {
+    setAuthView('login');
+    window.location.hash = 'login';
+  };
+
+  const handleNavigateRegister = () => {
+    setAuthView('register');
+    window.location.hash = 'register';
+  };
+
+  const handleNavigateHome = () => {
+    setAuthView('landing');
+    if (window.location.hash === '#login' || window.location.hash === '#register') {
+      window.history.pushState(null, '', window.location.pathname);
+    }
+  };
 
   // ── Splash screen: show once on cold-start, independent of auth ──────────
   const [showSplash, setShowSplash] = useState(true);
@@ -84,10 +133,39 @@ const MainContent: React.FC = () => {
   }
 
   if (!user) {
-    if (authView === 'register') {
-      return <>{splash}<RegisterPage onNavigateLogin={() => setAuthView('login')} /></>;
+    if (authView === 'login') {
+      return (
+        <>
+          {splash}
+          <LoginPage
+            onNavigateRegister={handleNavigateRegister}
+            onNavigateHome={handleNavigateHome}
+          />
+        </>
+      );
     }
-    return <>{splash}<LoginPage onNavigateRegister={() => setAuthView('register')} /></>;
+
+    if (authView === 'register') {
+      return (
+        <>
+          {splash}
+          <RegisterPage
+            onNavigateLogin={handleNavigateLogin}
+            onNavigateHome={handleNavigateHome}
+          />
+        </>
+      );
+    }
+
+    return (
+      <>
+        {splash}
+        <LandingPage
+          onNavigateLogin={handleNavigateLogin}
+          onNavigateRegister={handleNavigateRegister}
+        />
+      </>
+    );
   }
 
   const renderTabContent = () => {

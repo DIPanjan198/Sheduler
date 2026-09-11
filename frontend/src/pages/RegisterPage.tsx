@@ -6,9 +6,10 @@ import { Logo } from '../components/ui/Logo';
 
 interface RegisterPageProps {
   onNavigateLogin: () => void;
+  onNavigateHome?: () => void;
 }
 
-export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin }) => {
+export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin, onNavigateHome }) => {
   const { register } = useAuth();
   const [step, setStep] = useState<1 | 2>(1);
 
@@ -95,6 +96,18 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin }) =
       <div className="absolute top-1/4 -left-20 w-80 h-80 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none animate-orb-1" />
       <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-purple-500/15 rounded-full blur-3xl pointer-events-none animate-orb-2" />
       <div className="absolute -top-10 right-1/4 w-64 h-64 bg-pink-400/10 rounded-full blur-3xl pointer-events-none animate-orb-3" />
+
+      {/* Back to Home Button */}
+      {onNavigateHome && (
+        <button
+          type="button"
+          onClick={onNavigateHome}
+          className="absolute top-5 left-5 z-20 inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-slate-700 hover:text-indigo-600 bg-white/90 hover:bg-white backdrop-blur-md rounded-xl border border-slate-200/80 shadow-xs hover:shadow-sm transition-all cursor-pointer group"
+        >
+          <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:-translate-x-0.5 transition-transform" />
+          <span>Back to Home</span>
+        </button>
+      )}
 
       {/* Main Glass Card */}
       <div className="w-full max-w-md bg-white/95 backdrop-blur-xl p-6 sm:p-9 rounded-2xl border border-gray-200/80 shadow-lifted space-y-5 relative z-10">

@@ -182,7 +182,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
             backgroundClip: 'text', margin: 0, lineHeight: 1.2,
             fontFamily: "'Plus Jakarta Sans', sans-serif",
           }}>
-            ShiftSync
+            StaffGrid
           </h1>
           <p style={{
             fontSize: 12, color: 'rgba(199,210,254,0.65)', letterSpacing: '0.2em',
@@ -247,7 +247,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
         opacity: phase === 'enter' ? 0 : 0.8,
         transition: 'opacity 1s ease 0.4s',
       }}>
-        © {new Date().getFullYear()} ShiftSync — All rights reserved
+        © {new Date().getFullYear()} StaffGrid — All rights reserved
       </div>
 
       <style>{SPLASH_KEYFRAMES}</style>

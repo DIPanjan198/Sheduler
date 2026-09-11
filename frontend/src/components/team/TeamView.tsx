@@ -311,7 +311,7 @@ export const TeamView: React.FC = () => {
             <div className="grid grid-cols-2 gap-2 pt-1">
               <a
                 href={`https://api.whatsapp.com/send?phone=${phone.replace(/\D/g, '')}&text=${encodeURIComponent(
-                  `Hello ${firstName}! You have been invited to join Shift Scheduler. Please click this link to set your password and activate your account:\n${createdInviteUrl}`
+                  `Hello ${firstName}! You have been invited to join StaffGrid. Please click this link to set your password and activate your account:\n${createdInviteUrl}`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -320,8 +320,8 @@ export const TeamView: React.FC = () => {
                 <span>💬 WhatsApp Invite</span>
               </a>
               <a
-                href={`mailto:${email}?subject=${encodeURIComponent("Invitation to join Shift Scheduler")}&body=${encodeURIComponent(
-                  `Hello ${firstName},\n\nYou have been invited to join the team on Shift Scheduler.\n\nPlease click the activation link below to set your password and access your shifts:\n${createdInviteUrl}\n\nWelcome aboard!`
+                href={`mailto:${email}?subject=${encodeURIComponent("Invitation to join StaffGrid")}&body=${encodeURIComponent(
+                  `Hello ${firstName},\n\nYou have been invited to join the team on StaffGrid.\n\nPlease click the activation link below to set your password and access your shifts:\n${createdInviteUrl}\n\nWelcome aboard!`
                 )}`}
                 className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-all no-underline"
               >
