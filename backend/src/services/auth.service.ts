@@ -398,4 +398,222 @@ export class AuthService {
       tokens: { accessToken, refreshToken }
     };
   }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // FORGOT PASSWORD / OTP FUNCTIONALITY
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  static async requestPasswordResetOtp(email: string) {
+    const cleanEmail = email ? email.trim().toLowerCase() : '';
+    if (!cleanEmail) {
+      throw { status: 400, code: 'EMAIL_REQUIRED', message: 'Email address is required' };
+    }
+
+    let user = await prisma.user.findUnique({
+      where: { email: cleanEmail }
+    });
+
+    if (!user) {
+      const candidates = await prisma.user.findMany({
+        select: { id: true, email: true, status: true, firstName: true }
+      });
+      const match = candidates.find(u => u.email.toLowerCase() === cleanEmail);
+      if (match) {
+        user = await prisma.user.findUnique({ where: { id: match.id } });
+      }
+    }
+
+    if (!user) {
+      throw { status: 404, code: 'USER_NOT_FOUND', message: `No account found with email "${cleanEmail}". Please check your email address.` };
+    }
+
+    if (user.status === 'DISABLED') {
+      throw { status: 403, code: 'ACCOUNT_DISABLED', message: 'This account has been disabled. Please contact your manager.' };
+    }
+
+    // Rate-limiting check: 45 seconds cooldown
+    const existing = passwordResetStore.get(cleanEmail);
+    if (existing && existing.requestedAt && Date.now() - existing.requestedAt < 45000) {
+      const secondsLeft = Math.ceil((45000 - (Date.now() - existing.requestedAt)) / 1000);
+      throw { status: 429, code: 'TOO_MANY_REQUESTS', message: `Please wait ${secondsLeft} seconds before requesting a new OTP.` };
+    }
+
+    // Generate secure 6-digit OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    // Store in-memory
+    passwordResetStore.set(cleanEmail, {
+      otp,
+      expiresAt,
+      attempts: 0,
+      requestedAt: Date.now()
+    });
+
+    // Also persist in DB as fallback
+    try {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { inviteToken: `RESET_OTP:${otp}:${expiresAt}` }
+      });
+    } catch (dbErr) {
+      console.warn('[Forgot Password] Could not write OTP token to DB:', dbErr);
+    }
+
+    // Render modern HTML email template
+    const emailHtml = `
+      <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 32px; background-color: #f8fafc; border-radius: 16px; max-width: 540px; margin: 0 auto; color: #0f172a; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <div style="background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); color: white; width: 56px; height: 56px; border-radius: 16px; font-size: 24px; font-weight: 800; line-height: 56px; margin: 0 auto; text-align: center; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);">SS</div>
+          <h2 style="color: #1e1b4b; margin-top: 16px; font-size: 22px; font-weight: 800; letter-spacing: -0.02em;">Password Reset Code</h2>
+        </div>
+        <p style="font-size: 15px; color: #334155; line-height: 1.6;">Hello <strong>${user.firstName}</strong>,</p>
+        <p style="font-size: 14px; color: #475569; line-height: 1.6;">You requested to reset your password for Shift Scheduler. Use the verification code below to set a new password:</p>
+        
+        <div style="margin: 28px 0; text-align: center;">
+          <div style="display: inline-block; background: #eef2ff; border: 2px dashed #6366f1; border-radius: 14px; padding: 16px 36px;">
+            <span style="font-family: monospace; font-size: 38px; font-weight: 800; letter-spacing: 10px; color: #4338ca;">${otp}</span>
+          </div>
+          <p style="font-size: 12px; color: #64748b; margin-top: 12px; font-weight: 500;">This verification code is valid for <strong>10 minutes</strong>.</p>
+        </div>
+
+        <p style="font-size: 13px; color: #64748b; line-height: 1.6;">If you didn't request a password reset, you can safely ignore this email. Your account remains secure.</p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+        <p style="font-size: 11px; color: #94a3b8; text-align: center;">Shift Scheduler &bull; Enterprise Staff Scheduling & Time Clock</p>
+      </div>
+    `;
+
+    // Dispatch email
+    let emailSent = false;
+    try {
+      const emailTimeout = new Promise<boolean>((_, reject) =>
+        setTimeout(() => reject(new Error('Email delivery timed out after 15s')), 15000)
+      );
+      const sent = await Promise.race([
+        sendEmail(user.email, 'Your Password Reset Code — Shift Scheduler', emailHtml),
+        emailTimeout
+      ]);
+      emailSent = Boolean(sent);
+    } catch (sendErr: any) {
+      console.error(`[Forgot Password] Failed to deliver OTP to ${cleanEmail}:`, sendErr.message || sendErr);
+      emailSent = false;
+    }
+
+    return {
+      success: true,
+      emailSent,
+      message: `A 6-digit verification code has been sent to ${cleanEmail}. Please check your inbox and spam folder.`
+    };
+  }
+
+  static async verifyAndResetPassword(email: string, otp: string, newPassword: string) {
+    const cleanEmail = email ? email.trim().toLowerCase() : '';
+    const cleanOtp = otp ? otp.trim().replace(/\s+/g, '') : '';
+
+    if (!cleanEmail) {
+      throw { status: 400, code: 'EMAIL_REQUIRED', message: 'Email address is required' };
+    }
+    if (!cleanOtp || cleanOtp.length !== 6) {
+      throw { status: 400, code: 'OTP_REQUIRED', message: 'Valid 6-digit verification code is required' };
+    }
+    if (!newPassword || newPassword.length < 6) {
+      throw { status: 400, code: 'PASSWORD_TOO_SHORT', message: 'New password must be at least 6 characters long' };
+    }
+
+    let user = await prisma.user.findUnique({
+      where: { email: cleanEmail }
+    });
+
+    if (!user) {
+      const candidates = await prisma.user.findMany({
+        select: { id: true, email: true, status: true, inviteToken: true }
+      });
+      const match = candidates.find(u => u.email.toLowerCase() === cleanEmail);
+      if (match) {
+        user = await prisma.user.findUnique({ where: { id: match.id } });
+      }
+    }
+
+    if (!user) {
+      throw { status: 404, code: 'USER_NOT_FOUND', message: 'No account found with this email address' };
+    }
+
+    if (user.status === 'DISABLED') {
+      throw { status: 403, code: 'ACCOUNT_DISABLED', message: 'This account has been disabled. Please contact your administrator.' };
+    }
+
+    // Verify OTP from memory store or DB token fallback
+    const cached = passwordResetStore.get(cleanEmail);
+    let matched = false;
+    let isExpired = false;
+
+    if (cached) {
+      if (Date.now() > cached.expiresAt) {
+        isExpired = true;
+        passwordResetStore.delete(cleanEmail);
+      } else if (cached.attempts >= 5) {
+        passwordResetStore.delete(cleanEmail);
+        throw { status: 400, code: 'MAX_ATTEMPTS_EXCEEDED', message: 'Too many incorrect attempts. Please request a new verification code.' };
+      } else if (cached.otp === cleanOtp) {
+        matched = true;
+      } else {
+        cached.attempts += 1;
+      }
+    }
+
+    // Fallback to database stored OTP if server restarted
+    if (!matched && !isExpired && user.inviteToken && user.inviteToken.startsWith('RESET_OTP:')) {
+      const parts = user.inviteToken.split(':');
+      if (parts.length === 3) {
+        const dbOtp = parts[1];
+        const dbExpiresAt = parseInt(parts[2], 10);
+        if (Date.now() <= dbExpiresAt && dbOtp === cleanOtp) {
+          matched = true;
+        } else if (Date.now() > dbExpiresAt) {
+          isExpired = true;
+        }
+      }
+    }
+
+    if (isExpired) {
+      throw { status: 400, code: 'OTP_EXPIRED', message: 'Verification code has expired. Please request a new code.' };
+    }
+
+    if (!matched) {
+      throw { status: 400, code: 'INVALID_OTP', message: 'Invalid verification code. Please check the 6-digit code in your email and try again.' };
+    }
+
+    // Hash the new password
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    // Update user in DB
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        status: user.status === 'INVITED' ? 'ACTIVE' : user.status,
+        inviteToken: null
+      }
+    });
+
+    // Clear reset cache
+    passwordResetStore.delete(cleanEmail);
+
+    console.log(`[Forgot Password] Password successfully reset for "${cleanEmail}"`);
+
+    return {
+      success: true,
+      message: 'Password updated successfully! You can now sign in with your new password.'
+    };
+  }
 }
+
+// In-memory cache for OTP storage
+interface PasswordResetStoreItem {
+  otp: string;
+  expiresAt: number;
+  attempts: number;
+  requestedAt: number;
+}
+const passwordResetStore = new Map<string, PasswordResetStoreItem>();

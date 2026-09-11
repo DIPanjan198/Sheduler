@@ -115,4 +115,36 @@ export class AuthController {
       return res.status(500).json({ success: false, error: err.message, env: envDiagnostics });
     }
   }
+
+  static async forgotPassword(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+      const result = await AuthService.requestPasswordResetOtp(email);
+      return res.json(result);
+    } catch (err: any) {
+      const status = err.status || 400;
+      return res.status(status).json({
+        error: {
+          code: err.code || 'FORGOT_PASSWORD_FAILED',
+          message: err.message || 'Failed to process password reset request'
+        }
+      });
+    }
+  }
+
+  static async resetPassword(req: Request, res: Response) {
+    try {
+      const { email, otp, newPassword } = req.body;
+      const result = await AuthService.verifyAndResetPassword(email, otp, newPassword);
+      return res.json(result);
+    } catch (err: any) {
+      const status = err.status || 400;
+      return res.status(status).json({
+        error: {
+          code: err.code || 'RESET_PASSWORD_FAILED',
+          message: err.message || 'Failed to update password'
+        }
+      });
+    }
+  }
 }
